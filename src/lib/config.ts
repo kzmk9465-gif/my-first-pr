@@ -39,6 +39,12 @@ export const siteConfig = {
     .split(",")
     .map((s) => s.trim().toLowerCase())
     .filter(Boolean),
+  /** オンライン決済（Stripe Checkout）。鍵が無ければモード自動切替でモック決済 */
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY ?? "",
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET ?? "",
+    currency: process.env.PAYMENT_CURRENCY ?? "jpy",
+  },
   /** 落札後の支払い案内（銀行振込を想定） */
   payment: {
     method: process.env.PAYMENT_METHOD ?? "銀行振込",

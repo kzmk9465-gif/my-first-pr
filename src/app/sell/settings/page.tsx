@@ -23,7 +23,8 @@ export default async function SellerSettingsPage({ searchParams }: { searchParam
           <label className="block">常温便の送料（円）<input name="shipping_normal" type="number" min={0} defaultValue={seller.shipping_normal} className="input mt-1" /></label>
           <label className="block">クール便の送料（円）<input name="shipping_cool" type="number" min={0} defaultValue={seller.shipping_cool} className="input mt-1" /></label>
         </div>
-        <label className="block">お支払い案内（落札者に表示。振込先など）<textarea name="payment_info" rows={4} className="input mt-1" defaultValue={seller.payment_info ?? ""} placeholder="例: ○○銀行 ○○支店 普通 1234567 名義 ○○。落札後3日以内にお振込みください。" /></label>
+        <label className="flex items-start gap-2"><input type="checkbox" name="accepts_online" defaultChecked={!!seller.accepts_online} className="mt-1" /><span>オンライン決済（カード・PayPay）を受け付ける<br /><span className="text-xs text-muted">落札者がマイページからその場で支払え、入金確認が自動で反映されます。カード番号は決済事業者の画面で入力され、当サイトには届きません。</span></span></label>
+        <label className="block">お支払い案内（オンライン決済を使わない場合に表示。振込先など）<textarea name="payment_info" rows={4} className="input mt-1" defaultValue={seller.payment_info ?? ""} placeholder="例: ○○銀行 ○○支店 普通 1234567 名義 ○○。落札後3日以内にお振込みください。" /></label>
         <label className="block">出品者紹介文<textarea name="description" rows={3} className="input mt-1" defaultValue={seller.description ?? ""} /></label>
         <p className="text-xs text-muted">手数料率（現在 {seller.fee_rate}%）とPINコードの変更はお店にご連絡ください。</p>
         <button className="btn w-full">保存</button>

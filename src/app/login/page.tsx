@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { siteConfig } from "@/lib/config";
@@ -43,7 +44,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <input name="email" type="email" placeholder="例: yamada@example.com" required autoFocus className="input" defaultValue={sp.email ?? ""} />
           <button className="btn w-full">認証コードを送信</button>
           {lineLoginEnabled() && <a href={`/api/line/login?next=${encodeURIComponent(next)}`} className="btn btn-line w-full">LINEでログイン（連携済みの方）</a>}
-          <p className="text-xs text-muted">ログインすることで<a href="/legal/terms" className="underline">利用規約</a>と<a href="/legal/privacy" className="underline">プライバシーポリシー</a>に同意したものとみなします。</p>
+          <p className="text-xs text-muted">ログインすることで<Link href="/legal/terms" className="underline">利用規約</Link>と<Link href="/legal/privacy" className="underline">プライバシーポリシー</Link>に同意したものとみなします。</p>
         </form>
       )}
     </div>

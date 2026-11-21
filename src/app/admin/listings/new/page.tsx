@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { getSellers } from "@/lib/auctions";
@@ -21,7 +22,7 @@ export default async function NewListingPage({ searchParams }: { searchParams: P
     <div className="max-w-2xl mx-auto space-y-4">
       <h1 className="text-2xl font-black text-accent-2">新規出品</h1>
       {sp.error && <p className="text-danger text-sm border border-danger/40 rounded p-2">{sp.error}</p>}
-      {sellers.length === 0 && <p className="text-sm text-danger">先に<a href="/admin/sellers" className="underline">出品者</a>を登録してください。</p>}
+      {sellers.length === 0 && <p className="text-sm text-danger">先に<Link href="/admin/sellers" className="underline">出品者</Link>を登録してください。</p>}
       <form action={createListingAction} className="card p-5 space-y-3 text-sm">
         <label className="block">出品者 *
           <select name="seller_id" required className="input mt-1">

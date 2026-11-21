@@ -21,6 +21,8 @@ for (const [name, slug, desc] of sellers) {
   db.prepare("INSERT OR IGNORE INTO sellers (name, slug, description) VALUES (?, ?, ?)").run(name, slug, desc);
 }
 const sid = (slug: string) => (db.prepare("SELECT id FROM sellers WHERE slug = ?").get(slug) as { id: number }).id;
+// デモ: オンライン決済を有効化（本番は出品者/管理画面の設定で切替）
+db.prepare("UPDATE sellers SET accepts_online = 1").run();
 
 const h = 3600_000;
 const now = Date.now();

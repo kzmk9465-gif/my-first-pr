@@ -244,6 +244,20 @@ CREATE TABLE IF NOT EXISTS reports (
   handled INTEGER NOT NULL DEFAULT 0,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
+CREATE TABLE IF NOT EXISTS payments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  token TEXT NOT NULL UNIQUE,
+  listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  buyer_id INTEGER NOT NULL REFERENCES users(id),
+  seller_id INTEGER NOT NULL REFERENCES sellers(id),
+  amount INTEGER NOT NULL,
+  provider TEXT NOT NULL DEFAULT 'mock',
+  session_id TEXT,
+  status TEXT NOT NULL DEFAULT 'pending',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  paid_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_payments_listing ON payments(listing_id);
 CREATE TABLE IF NOT EXISTS favorites (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
@@ -283,6 +297,9 @@ const COLUMN_MIGRATIONS: [table: string, column: string, ddl: string][] = [
   ["listings", "comments_enabled", "INTEGER NOT NULL DEFAULT 1"],
   // 第5段階
   ["users", "prefecture", "TEXT"],
+  // 第6段階：オンライン決済
+  ["sellers", "accepts_online", "INTEGER NOT NULL DEFAULT 0"],
+  ["orders", "paid_via", "TEXT"],
 ];
 
 function migrate(db: DatabaseSync): void {

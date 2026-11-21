@@ -137,7 +137,7 @@ export async function sellerAccountAction(formData: FormData): Promise<void> {
   const feeRate = plan === "custom" ? Math.min(100, Math.max(0, Number(str(formData, "fee_rate")) || 0)) : feePlanRate(plan);
   const wantPin = formData.get("issue_pin") === "on";
   const pin = wantPin ? randomPin() : undefined;
-  updateSellerAccount(sellerId, { user_id: userId, fee_rate: feeRate, pin });
+  updateSellerAccount(sellerId, { user_id: userId, fee_rate: feeRate, pin, accepts_online: formData.get("accepts_online") === "on" });
   revalidatePath("/admin/sellers");
   const p = new URLSearchParams({ saved: "1" });
   if (pin) p.set("pin", pin);

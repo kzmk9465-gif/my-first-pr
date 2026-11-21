@@ -136,6 +136,7 @@ export async function sellerSettingsAction(formData: FormData): Promise<void> {
     shipping_cool: Math.max(0, Number(str(formData, "shipping_cool")) || 0),
     payment_info: str(formData, "payment_info", 500),
     description: str(formData, "description", 500),
+    accepts_online: formData.get("accepts_online") === "on",
   });
   revalidatePath("/sell/settings");
   redirect("/sell/settings?saved=1");

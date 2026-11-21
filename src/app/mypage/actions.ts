@@ -66,3 +66,12 @@ export async function gachaAction(): Promise<void> {
   if (!r.ok) redirect(`/mypage?gacha_error=${encodeURIComponent(r.error)}`);
   redirect(`/mypage?gacha=${encodeURIComponent(r.prize)}&won=${r.won ? 1 : 0}`);
 }
+
+export async function startPaymentAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login?next=/mypage");
+  const { startCheckout } = await import("@/lib/payments");
+  const r = await startCheckout(Number(formData.get("listing_id")), user.id);
+  if (!r.ok) redirect(`/mypage?pay_error=${encodeURIComponent(r.error)}#orders`);
+  redirect(r.url);
+}

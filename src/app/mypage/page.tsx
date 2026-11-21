@@ -7,7 +7,8 @@ import ListingCard from "@/components/ListingCard";
 import Countdown from "@/components/Countdown";
 import { siteConfig } from "@/lib/config";
 import { formatDateTime, yen } from "@/lib/format";
-import { completeOrderAction, gachaAction, linkLineAction, loginBonusAction, logoutAction, markReadAction, updateProfileAction } from "./actions";
+import { completeOrderAction, gachaAction, linkLineAction, loginBonusAction, logoutAction, markReadAction, startPaymentAction, updateProfileAction } from "./actions";
+import { paymentProvider } from "@/lib/payments";
 import { GACHA_COST, bonusClaimedToday, myResults, points } from "@/lib/gacha";
 import { lineLoginEnabled } from "@/lib/line-login";
 import { ordersForBuyer } from "@/lib/sellers";
@@ -19,7 +20,7 @@ import { myCertificates } from "@/lib/certificates";
 export const metadata: Metadata = { title: "マイページ" };
 export const dynamic = "force-dynamic";
 
-export default async function MyPage({ searchParams }: { searchParams: Promise<{ saved?: string; received?: string; bonus?: string; gacha?: string; won?: string; gacha_error?: string }> }) {
+export default async function MyPage({ searchParams }: { searchParams: Promise<{ saved?: string; received?: string; bonus?: string; gacha?: string; won?: string; gacha_error?: string; pay_error?: string; pay_cancelled?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/mypage");
   const sp = await searchParams;
@@ -65,6 +66,8 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
       )}
       {sp.saved && <p className="text-ok text-sm border border-ok/40 rounded p-2">保存しました。</p>}
       {sp.received && <p className="text-ok text-sm border border-ok/40 rounded p-2">お受け取りありがとうございました。</p>}
+      {sp.pay_error && <p className="text-danger text-sm border border-danger/40 rounded p-2">{sp.pay_error}</p>}
+      {sp.pay_cancelled && <p className="text-muted text-sm border border-accent/20 rounded p-2">お支払いはキャンセルされました。取引はそのまま残っています。</p>}
 
       <section className="grid gap-4 md:grid-cols-2">
         <div className="card p-4 space-y-3">
@@ -163,9 +166,18 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
                     落札 {yen(o.price)} ＋ 送料 {yen(o.shipping_fee)}（{o.shipping_method === "cool" ? "クール便" : "常温便"}） ＝ <b>お支払い合計 {yen(o.price + o.shipping_fee)}</b>
                   </div>
                   {o.status === "awaiting_payment" && (
-                    <div className="text-xs border border-accent/20 rounded p-2 whitespace-pre-wrap">
-                      <b>お支払い方法：</b>{o.seller_payment_info || `${siteConfig.payment.method}。${siteConfig.payment.bankInfo}`}
-                      {"\n"}落札後{siteConfig.payment.dueDays}日以内にお支払いください。発送先：{user.shipping_address ? `〒${user.shipping_postal} ${user.shipping_address}` : <span className="text-danger">未登録（上の発送先情報を保存してください）</span>}
+                    <div className="space-y-2">
+                      {o.seller_accepts_online ? (
+                        <form action={startPaymentAction} className="flex flex-wrap items-center gap-2">
+                          <input type="hidden" name="listing_id" value={o.listing_id} />
+                          <button className="btn !py-1 text-sm">💳 オンラインで支払う（{yen(o.price + o.shipping_fee)}）</button>
+                          <span className="text-xs text-muted">カード・PayPay。{paymentProvider() === "mock" ? "※現在はテスト決済モードです。" : "決済画面へ移動します。"}</span>
+                        </form>
+                      ) : null}
+                      <div className="text-xs border border-accent/20 rounded p-2 whitespace-pre-wrap">
+                        <b>お支払い方法：</b>{o.seller_accepts_online ? "上の「オンラインで支払う」か、" : ""}{o.seller_payment_info || `${siteConfig.payment.method}。${siteConfig.payment.bankInfo}`}
+                        {"\n"}落札後{siteConfig.payment.dueDays}日以内にお支払いください。発送先：{user.shipping_address ? `〒${user.shipping_postal} ${user.shipping_address}` : <span className="text-danger">未登録（上の発送先情報を保存してください）</span>}
+                      </div>
                     </div>
                   )}
                   {o.status === "shipped" && (

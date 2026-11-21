@@ -55,6 +55,7 @@ export default async function SellersAdminPage({ searchParams }: { searchParams:
                   </select>
                 </label>
                 <label className="block">個別指定の手数料（%）<input name="fee_rate" type="number" min={0} max={100} defaultValue={acc.fee_rate} className="input mt-1" /></label>
+                <label className="flex items-center gap-2"><input type="checkbox" name="accepts_online" defaultChecked={!!acc.accepts_online} /> オンライン決済（カード・PayPay）を受け付ける</label>
                 <label className="flex items-center gap-2 mt-4"><input type="checkbox" name="issue_pin" /> PINコードを{acc.pin_hash ? "再" : ""}発行する（保存後に1回だけ表示）</label>
                 <button className="btn md:col-span-2">保存</button>
               </form>

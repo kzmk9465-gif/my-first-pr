@@ -15,6 +15,7 @@ export type SellerAccount = {
   shipping_normal: number;
   shipping_cool: number;
   payment_info: string | null;
+  accepts_online: number;
 };
 
 export type Order = {
@@ -22,6 +23,7 @@ export type Order = {
   buyer_id: number;
   seller_id: number;
   status: "awaiting_payment" | "paid" | "shipped" | "completed" | "cancelled";
+  paid_via: string | null;
   price: number;
   shipping_fee: number;
   shipping_method: string | null;
@@ -67,10 +69,11 @@ export function verifySellerPin(seller: SellerAccount, pin: string): boolean {
 /** 管理者が出品者アカウントを設定（会員との紐づけ・手数料・PIN） */
 export function updateSellerAccount(
   sellerId: number,
-  data: { user_id: number | null; fee_rate: number; pin?: string; shipping_normal?: number; shipping_cool?: number; payment_info?: string },
+  data: { user_id: number | null; fee_rate: number; pin?: string; shipping_normal?: number; shipping_cool?: number; payment_info?: string; accepts_online?: boolean },
 ): void {
   const db = getDb();
   db.prepare("UPDATE sellers SET user_id = ?, fee_rate = ? WHERE id = ?").run(data.user_id, data.fee_rate, sellerId);
+  if (data.accepts_online !== undefined) db.prepare("UPDATE sellers SET accepts_online = ? WHERE id = ?").run(data.accepts_online ? 1 : 0, sellerId);
   if (data.pin) setSellerPin(sellerId, data.pin);
   if (data.shipping_normal !== undefined) db.prepare("UPDATE sellers SET shipping_normal = ? WHERE id = ?").run(data.shipping_normal, sellerId);
   if (data.shipping_cool !== undefined) db.prepare("UPDATE sellers SET shipping_cool = ? WHERE id = ?").run(data.shipping_cool, sellerId);
@@ -80,11 +83,11 @@ export function updateSellerAccount(
 /** 出品者自身が変更できる設定（送料・支払い案内・紹介文） */
 export function updateSellerSettings(
   sellerId: number,
-  data: { shipping_normal: number; shipping_cool: number; payment_info: string; description: string },
+  data: { shipping_normal: number; shipping_cool: number; payment_info: string; description: string; accepts_online: boolean },
 ): void {
   getDb()
-    .prepare("UPDATE sellers SET shipping_normal = ?, shipping_cool = ?, payment_info = ?, description = ? WHERE id = ?")
-    .run(data.shipping_normal, data.shipping_cool, data.payment_info || null, data.description || null, sellerId);
+    .prepare("UPDATE sellers SET shipping_normal = ?, shipping_cool = ?, payment_info = ?, description = ?, accepts_online = ? WHERE id = ?")
+    .run(data.shipping_normal, data.shipping_cool, data.payment_info || null, data.description || null, data.accepts_online ? 1 : 0, sellerId);
 }
 
 /* ---------- 説明文テンプレート ---------- */
@@ -126,6 +129,7 @@ export type OrderWithListing = Order & {
   image_url: string | null;
   seller_name: string;
   seller_payment_info: string | null;
+  seller_accepts_online: number;
   buyer_email: string;
   buyer_name: string | null;
   buyer_line: string | null;
@@ -136,7 +140,7 @@ export type OrderWithListing = Order & {
 };
 
 const ORDER_SELECT = `
-  SELECT o.*, l.title, l.image_url, s.name AS seller_name, s.payment_info AS seller_payment_info,
+  SELECT o.*, l.title, l.image_url, s.name AS seller_name, s.payment_info AS seller_payment_info, s.accepts_online AS seller_accepts_online,
          u.email AS buyer_email, u.name AS buyer_name, u.line_user_id AS buyer_line,
          u.shipping_name, u.shipping_postal, u.shipping_address, u.shipping_phone
   FROM orders o JOIN listings l ON l.id = o.listing_id JOIN sellers s ON s.id = o.seller_id JOIN users u ON u.id = o.buyer_id`;
@@ -230,4 +234,17 @@ export function feePlanRate(key: string): number {
 
 export function randomPin(): string {
   return String(parseInt(randomBytes(4).toString("hex"), 16) % 100_000_000).padStart(8, "0");
+}
+
+/** 決済完了（Webhook／モック）からの入金確認。awaiting_payment のときだけ paid にして通知する。 */
+export async function confirmOrderPaidBySystem(listingId: number, via: string): Promise<boolean> {
+  const db = getDb();
+  const o = getOrder(listingId);
+  if (!o || o.status !== "awaiting_payment") return false;
+  const now = nowIso();
+  db.prepare("UPDATE orders SET status = 'paid', paid_via = ?, paid_at = ?, updated_at = ? WHERE listing_id = ? AND status = 'awaiting_payment'").run(via, now, now, listingId);
+  const buyer = db.prepare("SELECT id, email, line_user_id FROM users WHERE id = ?").get(o.buyer_id) as { id: number; email: string; line_user_id: string | null };
+  const title = (db.prepare("SELECT title FROM listings WHERE id = ?").get(listingId) as { title: string }).title;
+  await notifyUser(buyer, "system", `「${title}」のお支払いを確認しました（オンライン決済）。発送までお待ちください。`, listingId);
+  return true;
 }

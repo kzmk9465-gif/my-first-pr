@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Link from "next/link";
 import { siteConfig } from "@/lib/config";
 
 export const metadata: Metadata = { title: "オークション説明" };
@@ -28,7 +29,8 @@ export default function GuidePage() {
       <section>
         <h2 className="font-bold text-accent-2 mb-1">3. 落札とお支払い</h2>
         <p>終了時刻の時点で最高額の方が落札者となり、メールとお知らせでご連絡します。即決価格つきの出品は、即決ボタンからその場で落札できます。</p>
-        <p className="mt-1">落札後はマイページの「わたしの取引のいま」で、お支払い→入金の確認→発送→お受け取りの進み具合を確認できます。お支払い合計は落札額＋送料（常温便またはクール便）で、お支払い方法は出品者ごとの案内に従ってください（原則{siteConfig.payment.method}、落札後{siteConfig.payment.dueDays}日以内）。発送されると配送業者と追跡番号をお知らせします。</p>
+        <p className="mt-1">落札後はマイページの「わたしの取引のいま」で、お支払い→入金の確認→発送→お受け取りの進み具合を確認できます。お支払い合計は落札額＋送料（常温便またはクール便）です。</p>
+        <p className="mt-1">出品者がオンライン決済に対応している場合は、取引画面の「オンラインで支払う」からカードまたはPayPayでその場でお支払いでき、入金確認が自動で反映されます。カード番号は決済事業者の画面で入力され、当サイトのサーバーには届きません。対応していない場合は、出品者ごとの案内（原則{siteConfig.payment.method}）に従い、落札後{siteConfig.payment.dueDays}日以内にお支払いください。発送されると配送業者と追跡番号をお知らせします。</p>
       </section>
       <section>
         <h2 className="font-bold text-accent-2 mb-1">4. 発送・生体について</h2>
@@ -66,15 +68,15 @@ export default function GuidePage() {
       <section>
         <h2 className="font-bold text-accent-2 mb-1">6-2. 図鑑・品評会・ガチャ</h2>
         <ul className="list-disc pl-5 space-y-1">
-          <li><a href="/zukan" className="underline">メダカ図鑑</a>：品種とブリーダーのデータベース。承認済み会員はご自身の作出品種を登録できます（お店の確認後に掲載）。</li>
-          <li><a href="/contests" className="underline">品評会</a>：自慢の個体をエントリーし、会員の投票で順位を決めます。</li>
+          <li><Link href="/zukan" className="underline">メダカ図鑑</Link>：品種とブリーダーのデータベース。承認済み会員はご自身の作出品種を登録できます（お店の確認後に掲載）。</li>
+          <li><Link href="/contests" className="underline">品評会</Link>：自慢の個体をエントリーし、会員の投票で順位を決めます。</li>
           <li>ガチャ：マイページで毎日ログインボーナスを受け取り、10ポイントで1回挑戦。当選すると景品をお送りします。</li>
           <li>不審な出品を見つけたら、出品ページの「奉行所へ通報する」からお知らせください。</li>
         </ul>
       </section>
       <section>
         <h2 className="font-bold text-accent-2 mb-1">7. 出品したい方へ</h2>
-        <p>承認された会員は、お店の出品者登録を受けるとご自身で出品できます。手数料プランは{siteConfig.feePlans.map((p) => `${p.rate}%`).join("／")}から選べ、出品はお店の確認後に公開されます。詳しくは<a href="/sell" className="underline">出品者メニュー</a>をご覧ください。</p>
+        <p>承認された会員は、お店の出品者登録を受けるとご自身で出品できます。手数料プランは{siteConfig.feePlans.map((p) => `${p.rate}%`).join("／")}から選べ、出品はお店の確認後に公開されます。詳しくは<Link href="/sell" className="underline">出品者メニュー</Link>をご覧ください。</p>
       </section>
     </article>
   );
