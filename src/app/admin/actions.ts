@@ -6,6 +6,8 @@ import { getCurrentUser } from "@/lib/auth";
 import { cancelListing, createListing, createSeller, publishListing } from "@/lib/auctions";
 import { feePlanRate, randomPin, updateSellerAccount } from "@/lib/sellers";
 import { getDb } from "@/lib/db";
+import { createNews, setNewsActive } from "@/lib/news";
+import { setCommentsEnabled } from "@/lib/auctions";
 import { fromLocalInputValue } from "@/lib/format";
 import { siteConfig } from "@/lib/config";
 
@@ -149,4 +151,28 @@ export async function reviewCertificateAction(formData: FormData): Promise<void>
   await reviewSecondaryCertificate(Number(formData.get("id")), String(formData.get("decision")) === "approve");
   revalidatePath("/admin/certificates");
   redirect("/admin/certificates");
+}
+
+export async function createNewsAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const kind = (["news", "alert", "broadcast"] as const).find((k) => k === str(formData, "kind")) ?? "news";
+  const title = str(formData, "title", 120);
+  if (!title) redirect(`/admin/news?error=${encodeURIComponent("見出しは必須です。")}`);
+  createNews({ kind, title, body: str(formData, "body", 2000), image_url: str(formData, "image_url", 500), expires_in_minutes: Number(str(formData, "expires")) || undefined });
+  revalidatePath("/", "layout");
+  redirect("/admin/news?saved=1");
+}
+
+export async function toggleNewsAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  setNewsActive(Number(formData.get("id")), formData.get("active") === "1");
+  revalidatePath("/", "layout");
+  redirect("/admin/news");
+}
+
+export async function toggleCommentsAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  setCommentsEnabled(Number(formData.get("id")), formData.get("enabled") === "1");
+  revalidatePath("/admin");
+  redirect("/admin");
 }

@@ -156,6 +156,25 @@ CREATE TABLE IF NOT EXISTS listing_unlocks (
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   PRIMARY KEY (user_id, listing_id)
 );
+CREATE TABLE IF NOT EXISTS comments (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  user_id INTEGER REFERENCES users(id),
+  kind TEXT NOT NULL DEFAULT 'user',
+  body TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_comments_listing ON comments(listing_id, id);
+CREATE TABLE IF NOT EXISTS news (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  kind TEXT NOT NULL DEFAULT 'news',
+  title TEXT NOT NULL,
+  body TEXT,
+  image_url TEXT,
+  active INTEGER NOT NULL DEFAULT 1,
+  expires_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
 CREATE TABLE IF NOT EXISTS favorites (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
@@ -191,6 +210,8 @@ const COLUMN_MIGRATIONS: [table: string, column: string, ddl: string][] = [
   ["listings", "min_rank", "INTEGER NOT NULL DEFAULT 0"],
   ["listings", "passphrase_hash", "TEXT"],
   ["listings", "mystery", "INTEGER NOT NULL DEFAULT 0"],
+  // 第4段階：弾幕コメント
+  ["listings", "comments_enabled", "INTEGER NOT NULL DEFAULT 1"],
 ];
 
 function migrate(db: DatabaseSync): void {

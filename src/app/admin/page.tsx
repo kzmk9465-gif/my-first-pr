@@ -7,7 +7,7 @@ import { getOrder } from "@/lib/sellers";
 import { pendingSecondaryCertificates } from "@/lib/certificates";
 import { ORDER_STATUS_LABELS } from "@/lib/config";
 import { formatDateTime, yen } from "@/lib/format";
-import { cancelListingAction, publishListingAction, rejectListingAction } from "./actions";
+import { cancelListingAction, publishListingAction, rejectListingAction, toggleCommentsAction } from "./actions";
 
 export const metadata: Metadata = { title: "管理" };
 export const dynamic = "force-dynamic";
@@ -30,6 +30,7 @@ export default async function AdminPage() {
         <div className="flex gap-2">
           <Link href="/admin/members" className="btn btn-outline">会員管理{pendingCount > 0 && <span className="badge badge-hot ml-1">{pendingCount}</span>}</Link>
           <Link href="/admin/sellers" className="btn btn-outline">出品者管理</Link>
+          <Link href="/admin/news" className="btn btn-outline">瓦版・告知</Link>
           <Link href="/admin/certificates" className="btn btn-outline">証明書{pendingCerts > 0 && <span className="badge badge-hot ml-1">{pendingCerts}</span>}</Link>
           <Link href="/admin/listings/new" className="btn">＋ 新規出品</Link>
         </div>
@@ -67,8 +68,9 @@ export default async function AdminPage() {
                 <td className="py-2 text-right font-bold whitespace-nowrap">{yen(l.current_price)}</td>
                 <td className="py-2 text-right">{l.bid_count}</td>
                 <td className="py-2 text-xs whitespace-nowrap">{formatDateTime(l.ends_at)}</td>
-                <td className="py-2 text-right">
-                  <form action={cancelListingAction}><input type="hidden" name="id" value={l.id} /><button className="text-xs text-danger underline">取消</button></form>
+                <td className="py-2 text-right whitespace-nowrap">
+                  <form action={toggleCommentsAction} className="inline"><input type="hidden" name="id" value={l.id} /><input type="hidden" name="enabled" value={l.comments_enabled ? "0" : "1"} /><button className="text-xs underline mr-2" title="弾幕コメントの入切">💬{l.comments_enabled ? "入" : "切"}</button></form>
+                  <form action={cancelListingAction} className="inline"><input type="hidden" name="id" value={l.id} /><button className="text-xs text-danger underline">取消</button></form>
                 </td>
               </tr>
             ))}

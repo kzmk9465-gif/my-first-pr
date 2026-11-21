@@ -37,6 +37,7 @@ export type Listing = {
   min_rank: number;
   passphrase_hash: string | null;
   mystery: number;
+  comments_enabled: number;
   featured: number;
   hot: number;
   extended_count: number;
@@ -273,6 +274,13 @@ export async function placeBid(listingId: number, userId: number, amount: number
     tx.prepare(
       "UPDATE listings SET current_price = ?, ends_at = ?, status = 'open', extended_count = extended_count + ? WHERE id = ?",
     ).run(price, newEnd, extend && newEnd !== l.ends_at ? 1 : 0, listingId);
+    // 弾幕：入札が入ったら自動コメント
+    if (l.comments_enabled && outcome !== "raised") {
+      const name = (tx.prepare("SELECT COALESCE(name, '会員' || id) AS n FROM users WHERE id = ?").get(userId) as { n: string }).n;
+      tx.prepare("INSERT INTO comments (listing_id, user_id, kind, body) VALUES (?, ?, 'system', ?)").run(
+        listingId, userId, outcome === "lost" ? `${name}さん 挑むも届かず…！` : `${name}さんキター!! ${yen(price)}`,
+      );
+    }
     return { ok: true, outcome, price, max: amount, extended: extend && newEnd !== l.ends_at };
   });
 
@@ -335,6 +343,104 @@ export function myLostBids(userId: number, limit = 30) {
        WHERE lb.user_id = ? ORDER BY lb.id DESC LIMIT ?`,
     )
     .all(userId, limit) as { id: number; listing_id: number; amount: number; price_after: number; created_at: string; title: string; status: string; current_price: number; ends_at: string; seller_name: string }[];
+}
+
+/* ---------- 第4段階：ライブ状態・速報・弾幕 ---------- */
+
+export type LiveState = {
+  id: number;
+  status: string;
+  current_price: number;
+  bid_count: number;
+  ends_at: string;
+  extended_count: number;
+  leader_label: string | null;
+  recent: { id: number; label: string; amount: number; created_at: string; is_auto: number; user_id: number }[];
+  duel: { a: string; b: string; a_count: number; b_count: number } | null;
+  heat: boolean;
+};
+
+/** 入札画面がポーリングで取る現在の状態。一騎打ち判定とヒートアップ判定も含む。 */
+export function liveState(listingId: number): LiveState | null {
+  const db = getDb();
+  const l = db.prepare("SELECT id, status, current_price, ends_at, extended_count, (SELECT COUNT(*) FROM bids b WHERE b.listing_id = listings.id) AS bid_count FROM listings WHERE id = ?").get(listingId) as
+    | { id: number; status: string; current_price: number; ends_at: string; extended_count: number; bid_count: number }
+    | undefined;
+  if (!l) return null;
+  const recent = db
+    .prepare(
+      `SELECT b.id, COALESCE(u.name, '会員' || b.user_id) AS label, b.amount, b.created_at, b.is_auto, b.user_id
+       FROM bids b JOIN users u ON u.id = b.user_id WHERE b.listing_id = ? ORDER BY b.id DESC LIMIT 10`,
+    )
+    .all(listingId) as LiveState["recent"];
+  const lead = db
+    .prepare("SELECT COALESCE(u.name, '会員' || u.id) AS label FROM max_bids m JOIN users u ON u.id = m.user_id WHERE m.listing_id = ? ORDER BY m.max_amount DESC, m.created_at ASC LIMIT 1")
+    .get(listingId) as { label: string } | undefined;
+  // 一騎打ち：直近6件の入札が2人だけで交互に続いている
+  let duel: LiveState["duel"] = null;
+  const last = recent.slice(0, 6);
+  if (last.length >= 4) {
+    const ids = [...new Set(last.map((b) => b.user_id))];
+    if (ids.length === 2) {
+      const a = last.find((b) => b.user_id === ids[0])!, b = last.find((x) => x.user_id === ids[1])!;
+      duel = { a: a.label, b: b.label, a_count: last.filter((x) => x.user_id === ids[0]).length, b_count: last.filter((x) => x.user_id === ids[1]).length };
+    }
+  }
+  return { ...l, leader_label: lead?.label ?? null, recent, duel, heat: isHeated(listingId) };
+}
+
+/** ヒートアップ：直近1時間に3件以上の入札 */
+export function isHeated(listingId: number): boolean {
+  const since = new Date(Date.now() - 3600_000).toISOString();
+  const c = (getDb().prepare("SELECT COUNT(*) AS c FROM bids WHERE listing_id = ? AND created_at >= ?").get(listingId, since) as { c: number }).c;
+  return c >= 3;
+}
+
+export function heatedIds(): Set<number> {
+  const since = new Date(Date.now() - 3600_000).toISOString();
+  const rows = getDb().prepare("SELECT listing_id FROM bids WHERE created_at >= ? GROUP BY listing_id HAVING COUNT(*) >= 3").all(since) as { listing_id: number }[];
+  return new Set(rows.map((r) => r.listing_id));
+}
+
+/** サイト全体の入札速報（直近） */
+export function ticker(limit = 12) {
+  return getDb()
+    .prepare(
+      `SELECT b.id, b.listing_id, l.title, COALESCE(u.name, '会員' || b.user_id) AS label, b.amount, b.created_at
+       FROM bids b JOIN listings l ON l.id = b.listing_id JOIN users u ON u.id = b.user_id
+       WHERE l.status IN ('open','ended') ORDER BY b.id DESC LIMIT ?`,
+    )
+    .all(limit) as { id: number; listing_id: number; title: string; label: string; amount: number; created_at: string }[];
+}
+
+export type Comment = { id: number; listing_id: number; user_id: number | null; kind: "user" | "system" | "admin"; body: string; label: string; created_at: string };
+
+export function listComments(listingId: number, afterId = 0, limit = 50): Comment[] {
+  return getDb()
+    .prepare(
+      `SELECT c.*, COALESCE(u.name, CASE WHEN c.user_id IS NULL THEN '運営' ELSE '会員' || c.user_id END) AS label
+       FROM comments c LEFT JOIN users u ON u.id = c.user_id WHERE c.listing_id = ? AND c.id > ? ORDER BY c.id ASC LIMIT ?`,
+    )
+    .all(listingId, afterId, limit) as Comment[];
+}
+
+export function postComment(listingId: number, userId: number | null, body: string, kind: Comment["kind"] = "user"): { ok: true; id: number } | { ok: false; error: string } {
+  const text = body.replace(/\s+/g, " ").trim().slice(0, 60);
+  if (!text) return { ok: false, error: "コメントを入力してください。" };
+  const l = getDb().prepare("SELECT comments_enabled, status FROM listings WHERE id = ?").get(listingId) as { comments_enabled: number; status: string } | undefined;
+  if (!l) return { ok: false, error: "出品が見つかりません。" };
+  if (!l.comments_enabled) return { ok: false, error: "この出品ではコメントは無効です。" };
+  // 連投制限：同じ人が10秒以内に投稿していたら拒否
+  if (userId) {
+    const recent = getDb().prepare("SELECT created_at FROM comments WHERE listing_id = ? AND user_id = ? AND kind = 'user' ORDER BY id DESC LIMIT 1").get(listingId, userId) as { created_at: string } | undefined;
+    if (recent && Date.now() - new Date(recent.created_at).getTime() < 10_000) return { ok: false, error: "少し間をあけてから投稿してください。" };
+  }
+  const r = getDb().prepare("INSERT INTO comments (listing_id, user_id, kind, body) VALUES (?, ?, ?, ?)").run(listingId, userId, kind, text);
+  return { ok: true, id: Number(r.lastInsertRowid) };
+}
+
+export function setCommentsEnabled(listingId: number, enabled: boolean): void {
+  getDb().prepare("UPDATE listings SET comments_enabled = ? WHERE id = ?").run(enabled ? 1 : 0, listingId);
 }
 
 /* ---------- お気に入り ---------- */

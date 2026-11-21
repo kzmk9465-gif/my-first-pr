@@ -48,6 +48,10 @@ export default function GuidePage() {
         </ul>
       </section>
       <section>
+        <h2 className="font-bold text-accent-2 mb-1">4-4. 演出・音楽・声</h2>
+        <p>入札が通った時・抜かれた時・一騎打ちの時に、入札画面で短い演出が流れます。終了10分前からは合戦モードになり、残り時間が秒単位で表示されます。画面右上の「音」「演出」の札からそれぞれ入・切できます（はじめは音が出ません）。画面下の速報には最新の入札が流れ、左下の「瓦版」で激戦の品の記事やお知らせが読めます。弾幕コメントは承認済み会員が投稿でき、入札が入ると自動で流れます。</p>
+      </section>
+      <section>
         <h2 className="font-bold text-accent-2 mb-1">5. 証明マークについて</h2>
         <ul className="list-disc pl-5 space-y-1">
           <li><b>原作出証明</b>：作出者本人、または作出者からの委託による出品です。</li>

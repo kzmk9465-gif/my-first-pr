@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ListingCard from "@/components/ListingCard";
-import { favoriteIds, finalizeEnded, listListings } from "@/lib/auctions";
+import { favoriteIds, finalizeEnded, heatedIds, listListings } from "@/lib/auctions";
 import { getCurrentUser } from "@/lib/auth";
 import { siteConfig } from "@/lib/config";
 
@@ -22,6 +22,7 @@ export default async function AuctionsPage({ searchParams }: { searchParams: Pro
   const { items, total } = listListings({ tab, endWithin, sort, q: keyword, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
   const user = await getCurrentUser();
   const favs = user ? favoriteIds(user.id) : new Set<number>();
+  const heated = heatedIds();
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const q = (over: Partial<Search>) => {
@@ -84,7 +85,7 @@ export default async function AuctionsPage({ searchParams }: { searchParams: Pro
         <div className="card p-10 text-center text-muted">該当する出品はありません。</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map((l) => <ListingCard key={l.id} l={l} fav={favs.has(l.id)} back={q({ page: String(page) })} />)}
+          {items.map((l) => <ListingCard key={l.id} l={heated.has(l.id) ? { ...l, hot: 1 } : l} fav={favs.has(l.id)} back={q({ page: String(page) })} />)}
         </div>
       )}
 

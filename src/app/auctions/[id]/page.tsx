@@ -4,14 +4,16 @@ import { notFound } from "next/navigation";
 import { bidStatus, canRevealMystery, extensionSeconds, finalizeEnded, getBids, getListing, isFavorite, isFollowing, isUnlocked, listingImages, minimumBid } from "@/lib/auctions";
 import { getSellerForUser } from "@/lib/sellers";
 import Gallery from "@/components/Gallery";
+import LiveBoard from "@/components/LiveBoard";
+import Danmaku from "@/components/Danmaku";
+import { liveState } from "@/lib/auctions";
 import { canBid, getCurrentUser, needsRegistration } from "@/lib/auth";
 import { CERTIFICATE_LABELS, siteConfig } from "@/lib/config";
-import { formatDateTime, remaining, yen } from "@/lib/format";
+import { formatDateTime, yen } from "@/lib/format";
 import { confirmBidAction, favoriteAction, followAction, issueCertificateAction, unlockAction } from "./actions";
 import { userRank, rankByLevel } from "@/lib/ranks";
 import { certificateForListing } from "@/lib/certificates";
 import { getOrder } from "@/lib/sellers";
-import Countdown from "@/components/Countdown";
 
 export const dynamic = "force-dynamic";
 
@@ -41,6 +43,8 @@ export default async function ListingPage({ params, searchParams }: Props) {
   const rankOk = !l.min_rank || (user?.role === "admin") || (myRank ? myRank.rank.level >= l.min_rank : false);
   const unlocked = !l.passphrase_hash || (user ? user.role === "admin" || isUnlocked(user.id, l.id) : false);
   const order = l.status === "ended" && l.winner_id ? getOrder(l.id) : null;
+  const live = liveState(l.id)!;
+  const liveInit = { ...live, recent: live.recent.map((b) => ({ ...b })), duel: live.duel ? { ...live.duel } : null };
   const cert = l.status === "ended" ? certificateForListing(l.id) : null;
   const ytId = l.video_url?.match(/(?:v=|youtu\.be\/|shorts\/)([A-Za-z0-9_-]{6,})/)?.[1];
   const canBuyout = !!l.buyout_price && l.status === "open" && l.current_price < l.buyout_price;
@@ -64,9 +68,10 @@ export default async function ListingPage({ params, searchParams }: Props) {
         <nav className="text-xs text-muted"><Link href="/auctions" className="hover:text-accent-2">オークション一覧</Link> › ID:{l.id}</nav>
         <Gallery images={images} title={l.title} silhouette={!reveal} />
         {l.mystery && !reveal && <p className="text-xs text-muted text-center">📦 千両箱：中身は落札してからのお楽しみ。画像はシルエットで表示しています。</p>}
+        {l.status !== "review" && <Danmaku listingId={l.id} canPost={!!user && allowed} enabled={!!l.comments_enabled} />}
         {ytId && (
           <div className="card overflow-hidden aspect-video">
-            <iframe className="h-full w-full" src={`https://www.youtube-nocookie.com/embed/${ytId}?rel=0&playsinline=1&modestbranding=1`} title="出品動画" allow="encrypted-media; picture-in-picture" allowFullScreen loading="lazy" />
+            <iframe className="h-full w-full" src={`https://www.youtube-nocookie.com/embed/${ytId}?rel=0&playsinline=1&modestbranding=1&autoplay=1&mute=1&loop=1&playlist=${ytId}&controls=1`} title="出品動画" allow="autoplay; encrypted-media; picture-in-picture" allowFullScreen loading="lazy" />
           </div>
         )}
         <div className="card p-4 space-y-2 text-sm">
@@ -104,17 +109,7 @@ export default async function ListingPage({ params, searchParams }: Props) {
           </div>
           <h1 className="text-xl font-black leading-snug">{l.title}</h1>
           {l.subtitle && <p className="text-sm text-muted -mt-2">{l.subtitle}</p>}
-          <div>
-            <div className="text-sm text-muted">{open ? "現在価格" : l.status === "ended" ? "落札価格" : "価格"}</div>
-            <div className="text-3xl font-black text-accent-2">{yen(l.current_price)}</div>
-            <div className="text-xs text-muted">入札 {l.bid_count} 件</div>
-          </div>
-          {open && (
-            <div className="text-sm">
-              <Countdown endsAt={l.ends_at} fallback={remaining(l.ends_at)} />
-              <span className="text-muted ml-2">（終了 {formatDateTime(l.ends_at)}）</span>
-            </div>
-          )}
+          <LiveBoard listingId={l.id} initial={liveInit} open={open} myUserId={user?.id ?? null} />
 
           {sp.error && <p className="text-danger text-sm border border-danger/40 rounded p-2">{sp.error}</p>}
           {sp.unlocked && <p className="text-ok text-sm border border-ok/40 rounded p-2">🔓 合言葉を確認しました。入札できます。</p>}
@@ -215,22 +210,6 @@ export default async function ListingPage({ params, searchParams }: Props) {
           </form>
         </div>
 
-        <div className="card p-4">
-          <h2 className="font-bold text-accent-2 mb-2">入札履歴</h2>
-          {bids.length === 0 ? (
-            <p className="text-sm text-muted">まだ入札はありません。</p>
-          ) : (
-            <ol className="text-sm divide-y divide-accent/10">
-              {bids.slice(0, 20).map((b, i) => (
-                <li key={b.id} className="py-1.5 flex justify-between">
-                  <span>{i === 0 && open ? "🏆 " : ""}{user && b.user_id === user.id ? "あなた" : b.bidder_label}{b.is_auto ? <span className="text-xs text-muted ml-1">(自動)</span> : null}</span>
-                  <span className="text-muted">{formatDateTime(b.created_at)}</span>
-                  <span className="font-bold">{yen(b.amount)}</span>
-                </li>
-              ))}
-            </ol>
-          )}
-        </div>
       </div>
     </div>
   );

@@ -4,6 +4,11 @@ import "./globals.css";
 import { siteConfig } from "@/lib/config";
 import { getCurrentUser } from "@/lib/auth";
 import { getSellerForUser } from "@/lib/sellers";
+import { activeNews, headline, hotResults } from "@/lib/news";
+import { ticker } from "@/lib/auctions";
+import Ticker from "@/components/Ticker";
+import Kawaraban from "@/components/Kawaraban";
+import Broadcast from "@/components/Broadcast";
 
 export const metadata: Metadata = {
   title: { default: `${siteConfig.auctionName} | ${siteConfig.name}`, template: `%s | ${siteConfig.name}` },
@@ -18,6 +23,11 @@ export const viewport: Viewport = { themeColor: "#0b1020" };
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   const isSeller = user ? !!getSellerForUser(user.id) : false;
+  const alerts = activeNews("alert", 3);
+  const broadcast = activeNews("broadcast", 1)[0];
+  const news = activeNews("news", 10).map((n) => ({ id: n.id, title: n.title, body: n.body, image_url: n.image_url, created_at: n.created_at }));
+  const results = hotResults(5).map((r) => ({ id: r.id, title: r.title, current_price: r.current_price, headline: headline(r) }));
+  const tick = ticker().map((t) => ({ id: t.id, listing_id: t.listing_id, title: t.title, label: t.label, amount: t.amount, created_at: t.created_at }));
   return (
     <html lang="ja">
       <body className="min-h-screen flex flex-col">
@@ -44,7 +54,22 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </div>
           </nav>
         </header>
-        <main className="flex-1 mx-auto w-full max-w-5xl px-4 py-6">{children}</main>
+        {alerts.length > 0 && (
+          <div className="bg-accent text-[#1a1405] text-sm">
+            {alerts.map((a) => (
+              <div key={a.id} className="mx-auto max-w-5xl px-4 py-1.5 flex items-center gap-3">
+                <span className="font-black">📣</span>
+                <span className="font-bold">{a.title}</span>
+                {a.body && <span className="text-xs opacity-80 truncate">{a.body}</span>}
+                {a.image_url && /* eslint-disable-next-line @next/next/no-img-element */ <img src={a.image_url} alt="" className="h-6 rounded ml-auto" />}
+              </div>
+            ))}
+          </div>
+        )}
+        {broadcast && <Broadcast id={broadcast.id} text={broadcast.title} />}
+        <main className="flex-1 mx-auto w-full max-w-5xl px-4 py-6 pb-12">{children}</main>
+        <Kawaraban news={news} results={results} />
+        <Ticker initial={tick} />
         <footer className="border-t border-accent/20 text-xs text-muted">
           <div className="mx-auto max-w-5xl px-4 py-6 flex flex-wrap gap-x-4 gap-y-2 items-center justify-between">
             <div className="flex flex-wrap gap-x-4 gap-y-1">
