@@ -6,6 +6,7 @@ import { favoriteAction } from "@/app/auctions/[id]/actions";
 
 export default function ListingCard({ l, fav = false, back }: { l: Listing; fav?: boolean; back?: string }) {
   const ended = l.status === "ended" || l.status === "cancelled";
+  const soon = !ended && new Date(l.ends_at).getTime() - Date.now() < 60 * 60_000; // 残り1時間未満
   return (
     <article className="card group overflow-hidden flex flex-col transition-all duration-200 hover:-translate-y-0.5 hover:border-accent/45 hover:shadow-[0_18px_40px_-22px_rgba(0,0,0,0.9)]">
       <div className="relative overflow-hidden">
@@ -55,9 +56,9 @@ export default function ListingCard({ l, fav = false, back }: { l: Listing; fav?
           <div className="flex items-end justify-between">
             <div>
               <div className="text-[11px] text-muted tracking-wide">{ended ? "落札価格" : "現在価格"}</div>
-              <div className="text-2xl font-black text-accent-2 leading-tight drop-shadow-[0_0_14px_rgba(236,208,138,0.25)]">{yen(l.current_price)}</div>
+              <div className="text-2xl price-focus leading-tight">{yen(l.current_price)}</div>
             </div>
-            <span className={`text-xs ${ended ? "text-muted" : "text-ok"}`}>{ended ? `入札 ${l.bid_count}件` : remaining(l.ends_at)}</span>
+            <span className={`text-xs ${ended ? "text-muted" : soon ? "text-urgent font-bold" : "text-ok"}`}>{ended ? `入札 ${l.bid_count}件` : remaining(l.ends_at)}</span>
           </div>
           <div className="text-[11px] text-muted mt-0.5">終了：{formatDateTime(l.ends_at)}</div>
         </div>

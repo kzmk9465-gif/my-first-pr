@@ -8,10 +8,11 @@
   --surface-2: #1b2444;
   --foreground: #f3efe1;
   --muted: #9aa0b2;
-  --accent: #c9a24a;        /* 落ち着いた金 */
-  --accent-2: #ecd08a;      /* 明るい金（見出し・強調） */
+  --accent: #cda049;        /* 落ち着いた金（暖色寄り＝価値が最も目立つ） */
+  --accent-2: #f0d591;      /* 明るい金（見出し・強調） */
   --accent-deep: #8c6d2a;   /* 金の陰影 */
   --seal: #c0453b;          /* 朱（印章の赤。差し色） */
+  --urgent: #e4572e;        /* 緊急の朱橙（残り時間・終了間際だけに少量） */
   --danger: #f08a8a;
   --ok: #8fd6a0;
   --line: #06c755;
@@ -28,6 +29,7 @@
   --color-accent-2: var(--accent-2);
   --color-accent-deep: var(--accent-deep);
   --color-seal: var(--seal);
+  --color-urgent: var(--urgent);
   --color-danger: var(--danger);
   --color-ok: var(--ok);
   --color-line: var(--line);
@@ -116,6 +118,12 @@ body::before {
 .badge-ok { color: var(--ok); border-color: rgba(143,214,160,.5); background: rgba(143,214,160,0.08); }
 .badge-hot { color: #ffb067; border-color: rgba(255,176,103,.5); background: rgba(255,176,103,0.08); }
 .badge-star { color: #241a05; border-color: transparent; background: linear-gradient(180deg, var(--accent-2), var(--accent)); font-weight: 700; }
+
+/* 緊急（終了間際・残りわずか）。暖色の朱橙で行動を促す。使いすぎ注意（全体の1割未満） */
+.text-urgent { color: var(--urgent); }
+.badge-urgent { color: #fff; border-color: transparent; background: linear-gradient(180deg, #f0693f, var(--urgent)); font-weight: 700; }
+/* 価格の焦点：黄金比で見出しより大きく、ほのかに発光 */
+.price-focus { color: var(--accent-2); font-weight: 900; letter-spacing: .01em; text-shadow: 0 0 18px rgba(240,213,145,0.28); }
 
 /* ---- タブ ---- */
 .tab { padding: .55rem 1.1rem; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 700; transition: color .12s; }

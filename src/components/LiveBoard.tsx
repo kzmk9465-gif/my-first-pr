@@ -82,7 +82,7 @@ export default function LiveBoard({ listingId, initial, open, myUserId, highBidT
       <div className="flex items-start justify-between gap-2">
         <div>
           <div className="text-sm text-muted">{open ? "現在価格" : s.status === "ended" ? "落札価格" : "価格"}</div>
-          <div className={`text-3xl font-black text-accent-2 transition-transform ${flash ? "scale-110" : ""}`}>{yen(s.current_price)}</div>
+          <div className={`text-4xl price-focus transition-transform ${flash ? "scale-110" : ""}`}>{yen(s.current_price)}</div>
           <div className="text-xs text-muted">入札 {s.bid_count} 件{s.leader_label && open ? ` ・ 現在トップ ${s.leader_label}` : ""}{s.heat && <span className="badge badge-hot ml-2">🔥 ヒートアップ中</span>}</div>
         </div>
         <div className="text-[10px] text-right space-y-1">
@@ -93,11 +93,11 @@ export default function LiveBoard({ listingId, initial, open, myUserId, highBidT
       </div>
 
       {open && (
-        <div className={`mt-2 text-sm ${lastSpurt ? "text-danger" : "text-ok"}`}>
+        <div className={`mt-2 text-sm ${lastSpurt ? "text-urgent" : "text-ok"}`}>
           <span className="font-mono text-xl font-bold">{hhmmss}</span>
           <span className="text-muted ml-2" suppressHydrationWarning>（終了 {mounted ? fmt(s.ends_at) : ""}{s.extended_count > 0 ? ` ・ ${s.extended_count}回延長` : ""}）</span>
           {lastSpurt && fx && (
-            <div className="mt-1 rounded border border-danger/50 bg-danger/10 px-2 py-1 text-xs font-bold animate-pulse">
+            <div className="mt-1 rounded border border-urgent/60 bg-urgent/10 px-2 py-1 text-xs font-bold animate-pulse" style={{ color: "var(--urgent)" }}>
               ⚔ 終了10分前。ここからが合戦。最後まで目を離すな！
             </div>
           )}
