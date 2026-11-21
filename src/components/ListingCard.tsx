@@ -2,24 +2,34 @@ import Link from "next/link";
 import type { Listing } from "@/lib/auctions";
 import { CERTIFICATE_LABELS } from "@/lib/config";
 import { formatDateTime, remaining, yen } from "@/lib/format";
+import { favoriteAction } from "@/app/auctions/[id]/actions";
 
-export default function ListingCard({ l }: { l: Listing }) {
+export default function ListingCard({ l, fav = false, back }: { l: Listing; fav?: boolean; back?: string }) {
   const ended = l.status === "ended" || l.status === "cancelled";
   return (
     <article className="card overflow-hidden flex flex-col">
-      <Link href={`/auctions/${l.id}`} className="block relative aspect-[4/3] bg-surface-2">
-        {l.image_url ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={l.image_url} alt={l.title} className="h-full w-full object-cover" loading="lazy" />
-        ) : (
-          <div className="h-full w-full flex items-center justify-center text-muted text-sm">画像なし</div>
-        )}
-        {l.certificate && (
-          <span className="absolute left-2 top-2 badge badge-ok bg-background/80">{CERTIFICATE_LABELS[l.certificate]} ✓</span>
-        )}
-        {l.status === "scheduled" && <span className="absolute right-2 top-2 badge bg-background/80">開催前</span>}
-        {ended && <span className="absolute right-2 top-2 badge bg-background/80">{l.status === "cancelled" ? "取消" : "終了"}</span>}
-      </Link>
+      <div className="relative">
+        <Link href={`/auctions/${l.id}`} className="block relative aspect-[4/3] bg-surface-2">
+          {l.image_url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={l.image_url} alt={l.title} className="h-full w-full object-cover" loading="lazy" />
+          ) : (
+            <div className="h-full w-full flex items-center justify-center text-muted text-sm">画像なし</div>
+          )}
+          {l.certificate && (
+            <span className="absolute left-2 top-2 badge badge-ok bg-background/80">{CERTIFICATE_LABELS[l.certificate]} ✓</span>
+          )}
+          {l.status === "scheduled" && <span className="absolute right-2 top-2 badge bg-background/80">開催前</span>}
+          {ended && <span className="absolute right-2 top-2 badge bg-background/80">{l.status === "cancelled" ? "取消" : "終了"}</span>}
+        </Link>
+        <form action={favoriteAction} className="absolute right-2 bottom-2">
+          <input type="hidden" name="listing_id" value={l.id} />
+          <input type="hidden" name="back" value={back ?? "/auctions"} />
+          <button aria-label={fav ? "お気に入り解除" : "お気に入りに追加"} className={`h-9 w-9 rounded-full bg-background/80 border border-accent/30 text-lg ${fav ? "text-danger" : "text-muted"}`}>
+            {fav ? "♥" : "♡"}
+          </button>
+        </form>
+      </div>
       <div className="p-3 flex flex-col gap-2 flex-1">
         <div className="text-xs text-muted">
           出品 <Link href={`/sellers/${l.seller_slug}`} className="text-accent-2 hover:underline">{l.seller_name}</Link>

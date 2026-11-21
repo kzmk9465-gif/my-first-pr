@@ -47,6 +47,7 @@ export async function createListingAction(formData: FormData): Promise<void> {
     ends_at,
     featured: formData.get("featured") === "on",
     hot: formData.get("hot") === "on",
+    sudden_death: formData.get("sudden_death") === "on",
   });
   revalidatePath("/auctions");
   redirect(`/auctions/${id}`);
@@ -72,4 +73,22 @@ export async function createSellerAction(formData: FormData): Promise<void> {
     redirect(`/admin/sellers?error=${encodeURIComponent("そのスラッグは既に使われています。")}`);
   }
   redirect("/admin/sellers?saved=1");
+}
+
+export async function setMemberStatusAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+  const status = String(formData.get("status"));
+  const f = String(formData.get("f") ?? "pending");
+  if (!["pending", "approved", "blocked"].includes(status)) redirect("/admin/members");
+  const { setUserStatus } = await import("@/lib/auth");
+  const { getUserById } = await import("@/lib/auctions");
+  const { notifyUser } = await import("@/lib/notify");
+  setUserStatus(id, status as "pending" | "approved" | "blocked");
+  const u = getUserById(id);
+  if (u && status === "approved") {
+    await notifyUser({ id: u.id, email: u.email, line_user_id: (u as { line_user_id?: string | null }).line_user_id ?? null }, "system", "会員登録が承認されました。入札をお楽しみください。");
+  }
+  revalidatePath("/admin/members");
+  redirect(`/admin/members?f=${f}`);
 }

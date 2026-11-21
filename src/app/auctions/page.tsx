@@ -1,13 +1,14 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import ListingCard from "@/components/ListingCard";
-import { finalizeEnded, listListings } from "@/lib/auctions";
+import { favoriteIds, finalizeEnded, listListings } from "@/lib/auctions";
+import { getCurrentUser } from "@/lib/auth";
 import { siteConfig } from "@/lib/config";
 
 export const metadata: Metadata = { title: "オークション一覧" };
 export const dynamic = "force-dynamic";
 
-type Search = { tab?: string; end?: string; sort?: string; page?: string };
+type Search = { tab?: string; end?: string; sort?: string; page?: string; q?: string };
 const PAGE_SIZE = 24;
 
 export default async function AuctionsPage({ searchParams }: { searchParams: Promise<Search> }) {
@@ -17,16 +18,20 @@ export default async function AuctionsPage({ searchParams }: { searchParams: Pro
   const endWithin = (["today", "tomorrow", "3days"] as const).find((v) => v === sp.end);
   const sort = (["ending", "price_desc", "price_asc", "newest"] as const).find((v) => v === sp.sort) ?? "ending";
   const page = Math.max(1, Number(sp.page ?? 1) || 1);
-  const { items, total } = listListings({ tab, endWithin, sort, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
+  const keyword = (sp.q ?? "").slice(0, 50);
+  const { items, total } = listListings({ tab, endWithin, sort, q: keyword, limit: PAGE_SIZE, offset: (page - 1) * PAGE_SIZE });
+  const user = await getCurrentUser();
+  const favs = user ? favoriteIds(user.id) : new Set<number>();
   const pages = Math.max(1, Math.ceil(total / PAGE_SIZE));
 
   const q = (over: Partial<Search>) => {
     const p = new URLSearchParams();
-    const merged = { tab, end: endWithin, sort, ...over } as Record<string, string | undefined>;
+    const merged = { tab, end: endWithin, sort, q: keyword || undefined, ...over } as Record<string, string | undefined>;
     for (const [k, v] of Object.entries(merged)) if (v && !(k === "sort" && v === "ending") && !(k === "tab" && v === "open")) p.set(k, v);
     const s = p.toString();
     return `/auctions${s ? `?${s}` : ""}`;
   };
+  const q_clear = q({ q: undefined });
 
   return (
     <div className="space-y-5">
@@ -39,6 +44,14 @@ export default async function AuctionsPage({ searchParams }: { searchParams: Pro
         <Link href={q({ tab: "open", end: undefined })} className={`tab ${tab === "open" ? "tab-active" : ""}`}>開催中</Link>
         <Link href={q({ tab: "ended", end: undefined })} className={`tab ${tab === "ended" ? "tab-active" : ""}`}>終了分</Link>
       </div>
+
+      <form method="get" action="/auctions" className="flex gap-2">
+        {tab === "ended" && <input type="hidden" name="tab" value="ended" />}
+        {sort !== "ending" && <input type="hidden" name="sort" value={sort} />}
+        <input name="q" defaultValue={keyword} placeholder="品種名・出品者で検索" className="input" />
+        <button className="btn btn-outline whitespace-nowrap">検索</button>
+        {keyword && <Link href={q_clear} className="btn btn-outline whitespace-nowrap">解除</Link>}
+      </form>
 
       <div className="flex flex-wrap gap-2 text-xs">
         {tab === "open" && (
@@ -71,7 +84,7 @@ export default async function AuctionsPage({ searchParams }: { searchParams: Pro
         <div className="card p-10 text-center text-muted">該当する出品はありません。</div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {items.map((l) => <ListingCard key={l.id} l={l} />)}
+          {items.map((l) => <ListingCard key={l.id} l={l} fav={favs.has(l.id)} back={q({ page: String(page) })} />)}
         </div>
       )}
 

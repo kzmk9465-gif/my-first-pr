@@ -27,11 +27,12 @@ export type Listing = {
   featured: number;
   hot: number;
   extended_count: number;
+  sudden_death: number;
   bid_count: number;
   created_at: string;
 };
 
-export type Bid = { id: number; listing_id: number; user_id: number; amount: number; created_at: string; bidder_label: string };
+export type Bid = { id: number; listing_id: number; user_id: number; amount: number; is_auto: number; created_at: string; bidder_label: string };
 
 /** 出品の共通SELECT。extra に追加列（先頭カンマ付き）を渡せる。 */
 function listingSelect(extra = ""): string {
@@ -58,9 +59,10 @@ export async function finalizeEnded(): Promise<number> {
         | { id: number; title: string; current_price: number; ends_at: string }
         | undefined;
       if (!l || l.ends_at > nowIso()) return null;
-      const top = tx
-        .prepare("SELECT user_id, amount FROM bids WHERE listing_id = ? ORDER BY amount DESC, id ASC LIMIT 1")
-        .get(id) as { user_id: number; amount: number } | undefined;
+      const lead = tx
+        .prepare("SELECT user_id FROM max_bids WHERE listing_id = ? ORDER BY max_amount DESC, created_at ASC LIMIT 1")
+        .get(id) as { user_id: number } | undefined;
+      const top = lead ? { user_id: lead.user_id, amount: l.current_price } : undefined;
       tx.prepare("UPDATE listings SET status = 'ended', winner_id = ? WHERE id = ?").run(top?.user_id ?? null, id);
       return { listing: l, top };
     });
@@ -84,6 +86,7 @@ export type ListFilter = {
   endWithin?: "today" | "tomorrow" | "3days";
   sort?: "ending" | "price_desc" | "price_asc" | "newest";
   sellerId?: number;
+  q?: string;
   limit?: number;
   offset?: number;
 };
@@ -97,6 +100,11 @@ export function listListings(f: ListFilter): { items: Listing[]; total: number }
   if (f.sellerId) {
     where.push("l.seller_id = ?");
     params.push(f.sellerId);
+  }
+  if (f.q && f.q.trim()) {
+    const like = `%${f.q.trim().replace(/[%_]/g, "")}%`;
+    where.push("(l.title LIKE ? OR l.variety LIKE ? OR l.breeder LIKE ? OR s.name LIKE ?)");
+    params.push(like, like, like, like);
   }
   if (f.tab === "open" && f.endWithin) {
     const jstNow = new Date(Date.now() + 9 * 3600_000);
@@ -117,7 +125,7 @@ export function listListings(f: ListFilter): { items: Listing[]; total: number }
             : "l.featured DESC, l.ends_at ASC";
   const w = where.length ? `WHERE ${where.join(" AND ")}` : "";
   const total = (
-    db.prepare(`SELECT COUNT(*) AS c FROM listings l ${w}`).get(...params) as { c: number }
+    db.prepare(`SELECT COUNT(*) AS c FROM listings l JOIN sellers s ON s.id = l.seller_id ${w}`).get(...params) as { c: number }
   ).c;
   const limit = f.limit ?? 30;
   const offset = f.offset ?? 0;
@@ -146,15 +154,32 @@ export function minimumBid(l: Pick<Listing, "current_price" | "start_price" | "b
   return l.bid_count === 0 ? l.start_price : l.current_price + l.bid_increment;
 }
 
+/** 延長秒数。サドンデスなら延長回数ごとに短くなる（5分→4分→…→最短1分）。 */
+export function extensionSeconds(l: Pick<Listing, "sudden_death" | "extended_count">): number {
+  const base = siteConfig.autoExtendSeconds;
+  if (!l.sudden_death) return base;
+  const step = Math.max(1, Math.floor(base / 5));
+  return Math.max(siteConfig.minExtendSeconds, base - step * l.extended_count);
+}
+
 export type BidResult =
-  | { ok: true; amount: number; extended: boolean }
+  | { ok: true; outcome: "leading" | "raised" | "lost"; price: number; max: number; extended: boolean }
   | { ok: false; error: string };
 
-/** 入札。排他トランザクションで価格更新と自動延長を行う。 */
+type MaxBid = { user_id: number; max_amount: number; created_at: string };
+
+/**
+ * 上限額方式の入札（見えざる戦い）。
+ * amount は「ここまでなら出せる」上限で、実際の価格は競合状況で決まる。
+ * - 入札が無ければ開始価格でトップになる
+ * - 既にトップなら上限だけ更新（価格は動かない）
+ * - 現トップの上限を超えれば、相手の上限＋入札単位（自分の上限が上限）でトップになる
+ * - 超えなければ即負け。価格は自分の上限（相手の上限が上限）まで上がり、競り負け履歴に残る
+ */
 export async function placeBid(listingId: number, userId: number, amount: number): Promise<BidResult> {
   if (!Number.isInteger(amount) || amount <= 0) return { ok: false, error: "金額は整数で入力してください。" };
 
-  let outbid: { user_id: number } | undefined;
+  let notifyOutbid: number | undefined;
   let title = "";
   const result = transaction((tx): BidResult => {
     const l = tx
@@ -168,37 +193,130 @@ export async function placeBid(listingId: number, userId: number, amount: number
     if (l.status === "scheduled" && l.starts_at <= now) l.status = "open";
     if (l.status !== "open") return { ok: false, error: "このオークションは入札を受け付けていません。" };
     if (l.ends_at <= now) return { ok: false, error: "このオークションは終了しました。" };
-    const min = minimumBid(l);
-    if (amount < min) return { ok: false, error: `${yen(min)} 以上で入札してください。` };
-    if (amount % l.bid_increment !== 0 && amount !== l.start_price) {
-      return { ok: false, error: `入札単位は ${yen(l.bid_increment)} です。` };
-    }
     title = l.title;
-    outbid = tx
-      .prepare("SELECT user_id FROM bids WHERE listing_id = ? ORDER BY amount DESC, id ASC LIMIT 1")
-      .get(listingId) as { user_id: number } | undefined;
-    if (outbid?.user_id === userId) outbid = undefined;
 
-    tx.prepare("INSERT INTO bids (listing_id, user_id, amount) VALUES (?, ?, ?)").run(listingId, userId, amount);
+    const leader = tx
+      .prepare("SELECT user_id, max_amount, created_at FROM max_bids WHERE listing_id = ? ORDER BY max_amount DESC, created_at ASC LIMIT 1")
+      .get(listingId) as MaxBid | undefined;
+    const mine = tx
+      .prepare("SELECT user_id, max_amount, created_at FROM max_bids WHERE listing_id = ? AND user_id = ?")
+      .get(listingId, userId) as MaxBid | undefined;
 
+    const upsertMax = (max: number) =>
+      tx
+        .prepare(
+          `INSERT INTO max_bids (listing_id, user_id, max_amount) VALUES (?, ?, ?)
+           ON CONFLICT(listing_id, user_id) DO UPDATE SET max_amount = excluded.max_amount, updated_at = ?`,
+        )
+        .run(listingId, userId, max, now);
+    const insertBid = (uid: number, price: number, auto: boolean) =>
+      tx.prepare("INSERT INTO bids (listing_id, user_id, amount, is_auto) VALUES (?, ?, ?, ?)").run(listingId, uid, price, auto ? 1 : 0);
+
+    let outcome: "leading" | "raised" | "lost";
+    let price = l.current_price;
+
+    if (!leader) {
+      // 最初の入札
+      if (amount < l.start_price) return { ok: false, error: `${yen(l.start_price)} 以上で入札してください。` };
+      upsertMax(amount);
+      price = l.start_price;
+      insertBid(userId, price, false);
+      outcome = "leading";
+    } else if (leader.user_id === userId) {
+      // 既にトップ：上限の引き上げのみ
+      if (amount <= (mine?.max_amount ?? 0)) return { ok: false, error: `現在の上限 ${yen(mine!.max_amount)} より高い金額を入力してください。` };
+      upsertMax(amount);
+      outcome = "raised";
+    } else {
+      const min = l.current_price + l.bid_increment;
+      if (amount < min) return { ok: false, error: `${yen(min)} 以上で入札してください。` };
+      if (amount > leader.max_amount) {
+        // 相手の上限を超えた：相手の上限＋単位（自分の上限まで）でトップに
+        price = Math.min(amount, leader.max_amount + l.bid_increment);
+        upsertMax(amount);
+        insertBid(userId, price, false);
+        notifyOutbid = leader.user_id;
+        outcome = "leading";
+      } else {
+        // 届かなかった：価格は自分の上限まで上がり（相手の上限が上限）、相手の自動入札として記録
+        price = Math.min(leader.max_amount, amount === leader.max_amount ? amount : amount + l.bid_increment);
+        if (price < l.current_price) price = l.current_price;
+        upsertMax(amount);
+        tx.prepare("INSERT INTO lost_bids (listing_id, user_id, amount, price_after) VALUES (?, ?, ?, ?)").run(listingId, userId, amount, price);
+        if (price > l.current_price) insertBid(leader.user_id, price, true);
+        outcome = "lost";
+      }
+    }
+
+    // 自動延長（終了間際の入札はすべて対象。サドンデスなら延長幅が縮む）
     const remainingMs = new Date(l.ends_at).getTime() - Date.now();
     const extend = remainingMs < siteConfig.autoExtendWindowSeconds * 1000;
-    const newEnd = extend
-      ? new Date(Date.now() + siteConfig.autoExtendSeconds * 1000).toISOString()
-      : l.ends_at;
+    let newEnd = l.ends_at;
+    if (extend) {
+      const candidate = new Date(Date.now() + extensionSeconds(l) * 1000).toISOString();
+      if (candidate > l.ends_at) newEnd = candidate;
+    }
     tx.prepare(
       "UPDATE listings SET current_price = ?, ends_at = ?, status = 'open', extended_count = extended_count + ? WHERE id = ?",
-    ).run(amount, newEnd, extend ? 1 : 0, listingId);
-    return { ok: true, amount, extended: extend };
+    ).run(price, newEnd, extend && newEnd !== l.ends_at ? 1 : 0, listingId);
+    return { ok: true, outcome, price, max: amount, extended: extend && newEnd !== l.ends_at };
   });
 
-  if (result.ok && outbid) {
+  if (result.ok && notifyOutbid !== undefined) {
     const u = getDb()
       .prepare("SELECT id, email, line_user_id FROM users WHERE id = ?")
-      .get(outbid.user_id) as { id: number; email: string; line_user_id: string | null };
-    await notifyUser(u, "outbid", `「${title}」で高値更新されました。現在価格 ${yen(amount)}`, listingId);
+      .get(notifyOutbid) as { id: number; email: string; line_user_id: string | null };
+    await notifyUser(u, "outbid", `「${title}」で高値更新されました。現在価格 ${yen(result.price)}`, listingId);
   }
   return result;
+}
+
+/** 現在のトップ入札者と自分の上限 */
+export function bidStatus(listingId: number, userId?: number): { leader_id: number | null; my_max: number | null } {
+  const db = getDb();
+  const leader = db
+    .prepare("SELECT user_id FROM max_bids WHERE listing_id = ? ORDER BY max_amount DESC, created_at ASC LIMIT 1")
+    .get(listingId) as { user_id: number } | undefined;
+  const mine = userId
+    ? (db.prepare("SELECT max_amount FROM max_bids WHERE listing_id = ? AND user_id = ?").get(listingId, userId) as { max_amount: number } | undefined)
+    : undefined;
+  return { leader_id: leader?.user_id ?? null, my_max: mine?.max_amount ?? null };
+}
+
+export function myLostBids(userId: number, limit = 30) {
+  return getDb()
+    .prepare(
+      `SELECT lb.*, l.title, l.status, l.current_price, l.ends_at, l.seller_id, s.name AS seller_name
+       FROM lost_bids lb JOIN listings l ON l.id = lb.listing_id JOIN sellers s ON s.id = l.seller_id
+       WHERE lb.user_id = ? ORDER BY lb.id DESC LIMIT ?`,
+    )
+    .all(userId, limit) as { id: number; listing_id: number; amount: number; price_after: number; created_at: string; title: string; status: string; current_price: number; ends_at: string; seller_name: string }[];
+}
+
+/* ---------- お気に入り ---------- */
+
+export function isFavorite(userId: number, listingId: number): boolean {
+  return !!getDb().prepare("SELECT 1 FROM favorites WHERE user_id = ? AND listing_id = ?").get(userId, listingId);
+}
+
+export function toggleFavorite(userId: number, listingId: number): boolean {
+  const db = getDb();
+  if (isFavorite(userId, listingId)) {
+    db.prepare("DELETE FROM favorites WHERE user_id = ? AND listing_id = ?").run(userId, listingId);
+    return false;
+  }
+  db.prepare("INSERT INTO favorites (user_id, listing_id) VALUES (?, ?)").run(userId, listingId);
+  return true;
+}
+
+export function myFavorites(userId: number): Listing[] {
+  return getDb()
+    .prepare(`${LISTING_SELECT} JOIN favorites f ON f.listing_id = l.id AND f.user_id = ? ORDER BY l.status = 'open' DESC, l.ends_at ASC`)
+    .all(userId) as Listing[];
+}
+
+export function favoriteIds(userId: number): Set<number> {
+  return new Set((getDb().prepare("SELECT listing_id FROM favorites WHERE user_id = ?").all(userId) as { listing_id: number }[]).map((r) => r.listing_id));
 }
 
 /* ---------- 出品者・フォロー ---------- */
@@ -233,11 +351,13 @@ export function followedSellers(userId: number): Seller[] {
 
 /* ---------- マイページ ---------- */
 
-export function myBids(userId: number): (Listing & { my_max: number })[] {
-  const sql = listingSelect(", (SELECT MAX(b2.amount) FROM bids b2 WHERE b2.listing_id = l.id AND b2.user_id = ?) AS my_max");
+export function myBids(userId: number): (Listing & { my_max: number; leader_id: number })[] {
+  const sql = listingSelect(
+    ", mb.max_amount AS my_max, (SELECT user_id FROM max_bids m2 WHERE m2.listing_id = l.id ORDER BY m2.max_amount DESC, m2.created_at ASC LIMIT 1) AS leader_id",
+  );
   return getDb()
-    .prepare(`${sql} WHERE EXISTS (SELECT 1 FROM bids b3 WHERE b3.listing_id = l.id AND b3.user_id = ?) ORDER BY l.ends_at DESC`)
-    .all(userId, userId) as (Listing & { my_max: number })[];
+    .prepare(`${sql} JOIN max_bids mb ON mb.listing_id = l.id AND mb.user_id = ? ORDER BY l.ends_at DESC`)
+    .all(userId) as (Listing & { my_max: number; leader_id: number })[];
 }
 
 export function myWins(userId: number): Listing[] {
@@ -273,6 +393,7 @@ export type ListingInput = {
   ends_at: string;
   featured: boolean;
   hot: boolean;
+  sudden_death?: boolean;
 };
 
 export async function createListing(input: ListingInput): Promise<number> {
@@ -280,8 +401,8 @@ export async function createListing(input: ListingInput): Promise<number> {
   const r = getDb()
     .prepare(
       `INSERT INTO listings (seller_id, title, variety, breeder, certificate, quantity, description, image_url,
-         start_price, current_price, bid_increment, starts_at, ends_at, status, featured, hot)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         start_price, current_price, bid_increment, starts_at, ends_at, status, featured, hot, sudden_death)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       input.seller_id,
@@ -300,6 +421,7 @@ export async function createListing(input: ListingInput): Promise<number> {
       status,
       input.featured ? 1 : 0,
       input.hot ? 1 : 0,
+      (input.sudden_death ?? siteConfig.suddenDeathDefault) ? 1 : 0,
     );
   const id = Number(r.lastInsertRowid);
 

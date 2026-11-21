@@ -87,7 +87,47 @@ CREATE TABLE IF NOT EXISTS notifications (
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_notifications_user ON notifications(user_id, read);
+CREATE TABLE IF NOT EXISTS max_bids (
+  listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  max_amount INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  PRIMARY KEY (listing_id, user_id)
+);
+CREATE TABLE IF NOT EXISTS lost_bids (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  amount INTEGER NOT NULL,
+  price_after INTEGER NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_lost_bids_user ON lost_bids(user_id, id DESC);
+CREATE TABLE IF NOT EXISTS favorites (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  PRIMARY KEY (user_id, listing_id)
+);
 `;
+
+/** 既存DBに後から追加した列（ALTER TABLE は IF NOT EXISTS が無いので手動で確認） */
+const COLUMN_MIGRATIONS: [table: string, column: string, ddl: string][] = [
+  ["users", "status", "TEXT NOT NULL DEFAULT 'pending'"],
+  ["users", "shop_name", "TEXT"],
+  ["users", "instagram", "TEXT"],
+  ["users", "approved_at", "TEXT"],
+  ["listings", "sudden_death", "INTEGER NOT NULL DEFAULT 0"],
+  ["bids", "is_auto", "INTEGER NOT NULL DEFAULT 0"],
+];
+
+function migrate(db: DatabaseSync): void {
+  for (const [table, column, ddl] of COLUMN_MIGRATIONS) {
+    const cols = db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[];
+    if (!cols.some((c) => c.name === column)) db.exec(`ALTER TABLE ${table} ADD COLUMN ${column} ${ddl}`);
+  }
+}
 
 function open(): DatabaseSync {
   fs.mkdirSync(path.dirname(DB_PATH), { recursive: true });
@@ -96,6 +136,7 @@ function open(): DatabaseSync {
   db.exec("PRAGMA foreign_keys = ON;");
   db.exec("PRAGMA busy_timeout = 5000;");
   db.exec(SCHEMA);
+  migrate(db);
   return db;
 }
 

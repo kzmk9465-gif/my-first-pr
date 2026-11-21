@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth";
+import { getCurrentUser, listMembers } from "@/lib/auth";
 import { endedWithWinners, finalizeEnded, getUserById, listListings } from "@/lib/auctions";
 import { formatDateTime, yen } from "@/lib/format";
 import { cancelListingAction } from "./actions";
@@ -15,6 +15,7 @@ export default async function AdminPage() {
   if (user.role !== "admin") redirect("/auctions");
   await finalizeEnded();
   const open = listListings({ tab: "open", limit: 200 });
+  const pendingCount = listMembers("pending").length;
   const ended = endedWithWinners(50);
 
   return (
@@ -22,6 +23,7 @@ export default async function AdminPage() {
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-black text-accent-2">管理</h1>
         <div className="flex gap-2">
+          <Link href="/admin/members" className="btn btn-outline">会員管理{pendingCount > 0 && <span className="badge badge-hot ml-1">{pendingCount}</span>}</Link>
           <Link href="/admin/sellers" className="btn btn-outline">出品者管理</Link>
           <Link href="/admin/listings/new" className="btn">＋ 新規出品</Link>
         </div>

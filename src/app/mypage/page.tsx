@@ -1,8 +1,10 @@
 import type { Metadata } from "next";
-import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { finalizeEnded, followedSellers, myBids, myNotifications, myWins } from "@/lib/auctions";
+import { finalizeEnded, followedSellers, myBids, myFavorites, myLostBids, myNotifications, myWins } from "@/lib/auctions";
+import Link from "next/link";
+import ListingCard from "@/components/ListingCard";
+import Countdown from "@/components/Countdown";
 import { siteConfig } from "@/lib/config";
 import { formatDateTime, yen } from "@/lib/format";
 import { linkLineAction, logoutAction, markReadAction, updateProfileAction } from "./actions";
@@ -19,6 +21,9 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
   const wins = myWins(user.id);
   const follows = followedSellers(user.id);
   const notes = myNotifications(user.id);
+  const lost = myLostBids(user.id);
+  const favs = myFavorites(user.id);
+  const STATUS = { pending: ["承認待ち", "badge-hot"], approved: ["承認済み", "badge-ok"], blocked: ["停止中", ""] } as const;
   const unread = notes.filter((n) => !n.read).length;
 
   return (
@@ -27,7 +32,16 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
         <h1 className="text-2xl font-black text-accent-2">マイページ</h1>
         <form action={logoutAction}><button className="btn btn-outline !py-1">ログアウト</button></form>
       </div>
-      <p className="text-sm text-muted">ログイン中：{user.email}{user.role === "admin" && <span className="badge badge-star ml-2">管理者</span>}</p>
+      <p className="text-sm text-muted">
+        ログイン中：{user.email}
+        {user.role === "admin" && <span className="badge badge-star ml-2">管理者</span>}
+        <span className={`badge ml-2 ${STATUS[user.status][1]}`}>{STATUS[user.status][0]}</span>
+        {user.shop_name && <span className="ml-2">{user.shop_name}</span>}
+        <Link href="/register?next=/mypage" className="ml-2 underline text-xs">登録情報の変更</Link>
+      </p>
+      {user.status === "pending" && user.role !== "admin" && (
+        <p className="text-sm border border-accent/30 rounded p-2">会員登録の承認待ちです。承認されるとお知らせが届き、入札できるようになります。</p>
+      )}
       {sp.saved && <p className="text-ok text-sm border border-ok/40 rounded p-2">保存しました。</p>}
 
       <section className="grid gap-4 md:grid-cols-2">
@@ -81,6 +95,13 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
         </div>
       </section>
 
+      <section>
+        <h2 className="font-bold text-accent-2 mb-2">♡ お気に入り（{favs.length}）</h2>
+        {favs.length === 0 ? <p className="text-sm text-muted card p-4">出品カードの♡からお気に入りに登録できます。</p> : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{favs.map((l) => <ListingCard key={l.id} l={l} fav back="/mypage" />)}</div>
+        )}
+      </section>
+
       <section className="card p-4">
         <h2 className="font-bold text-accent-2 mb-2">🏆 落札品</h2>
         {wins.length === 0 ? <p className="text-sm text-muted">まだ落札品はありません。</p> : (
@@ -107,11 +128,11 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
           <table className="w-full text-sm">
             <tbody className="divide-y divide-accent/10">
               {bids.map((l) => {
-                const leading = l.status === "open" && l.current_price === l.my_max;
+                const leading = l.status === "open" && l.leader_id === user.id;
                 return (
                   <tr key={l.id}>
                     <td className="py-2"><Link href={`/auctions/${l.id}`} className="hover:text-accent-2">{l.title}</Link></td>
-                    <td className="py-2 text-right whitespace-nowrap">自分 {yen(l.my_max)}<div className="text-xs text-muted">現在 {yen(l.current_price)}</div></td>
+                    <td className="py-2 text-right whitespace-nowrap">上限 {yen(l.my_max)}<div className="text-xs text-muted">現在 {yen(l.current_price)}{l.status === "open" && <> ・ <Countdown endsAt={l.ends_at} fallback="" /></>}</div></td>
                     <td className="py-2 text-right whitespace-nowrap">
                       {l.status === "open" ? (leading ? <span className="badge badge-ok">最高額</span> : <span className="badge badge-hot">高値更新あり</span>)
                         : l.winner_id === user.id ? <span className="badge badge-star">落札</span> : <span className="badge">終了</span>}
@@ -119,6 +140,24 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
                   </tr>
                 );
               })}
+            </tbody>
+          </table>
+        )}
+      </section>
+
+      <section className="card p-4">
+        <h2 className="font-bold text-accent-2 mb-2">競り負け履歴</h2>
+        <p className="text-xs text-muted mb-2">入札したのに履歴に載らない場合はここに出ます。他の方の上限の方が高く、その場で負けた入札です。同じ出品者の次回出品でリベンジしましょう。</p>
+        {lost.length === 0 ? <p className="text-sm text-muted">競り負けはありません。</p> : (
+          <table className="w-full text-sm">
+            <tbody className="divide-y divide-accent/10">
+              {lost.map((x) => (
+                <tr key={x.id}>
+                  <td className="py-2"><Link href={`/auctions/${x.listing_id}`} className="hover:text-accent-2">{x.title}</Link><div className="text-xs text-muted">{x.seller_name} ・ {formatDateTime(x.created_at)}</div></td>
+                  <td className="py-2 text-right whitespace-nowrap">自分の上限 {yen(x.amount)}<div className="text-xs text-muted">負けた時点の価格 {yen(x.price_after)}</div></td>
+                  <td className="py-2 text-right whitespace-nowrap">{x.status === "open" ? <Link href={`/auctions/${x.listing_id}`} className="btn !py-1 text-xs">再挑戦</Link> : <span className="badge">終了</span>}</td>
+                </tr>
+              ))}
             </tbody>
           </table>
         )}

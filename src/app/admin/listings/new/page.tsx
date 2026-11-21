@@ -51,6 +51,7 @@ export default async function NewListingPage({ searchParams }: { searchParams: P
         <div className="flex gap-6">
           <label className="flex items-center gap-2"><input type="checkbox" name="featured" /> ⭐注目として先頭に表示</label>
           <label className="flex items-center gap-2"><input type="checkbox" name="hot" /> 🔥マークを付ける</label>
+          <label className="flex items-center gap-2"><input type="checkbox" name="sudden_death" defaultChecked={siteConfig.suddenDeathDefault} /> サドンデス（延長が回数ごとに短くなる）</label>
         </div>
         <button className="btn w-full" disabled={sellers.length === 0}>出品する</button>
       </form>

@@ -33,8 +33,8 @@ const items = [
   { s: "banshu-medaka", title: "播州めだか) 黒ラメ黄幹之 若魚5匹", variety: "黒ラメ黄幹之", breeder: "播州めだか", cert: "original", qty: "5匹", price: 1500, ends: 0.25 * h, featured: 0, hot: 0 },
 ];
 const ins = db.prepare(
-  `INSERT INTO listings (seller_id, title, variety, breeder, certificate, quantity, description, start_price, current_price, bid_increment, starts_at, ends_at, status, featured, hot)
-   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 100, ?, ?, 'open', ?, ?)`,
+  `INSERT INTO listings (seller_id, title, variety, breeder, certificate, quantity, description, start_price, current_price, bid_increment, starts_at, ends_at, status, featured, hot, sudden_death)
+   VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 100, ?, ?, 'open', ?, ?, 1)`,
 );
 for (const it of items) {
   ins.run(

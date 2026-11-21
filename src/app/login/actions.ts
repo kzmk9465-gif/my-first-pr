@@ -1,7 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
-import { isValidEmail, normalizeEmail, requestOtp, verifyOtp } from "@/lib/auth";
+import { getCurrentUser, isValidEmail, needsRegistration, normalizeEmail, requestOtp, verifyOtp } from "@/lib/auth";
 
 function safeNext(v: unknown): string {
   const s = String(v ?? "");
@@ -27,5 +27,7 @@ export async function verifyCodeAction(formData: FormData): Promise<void> {
     const p = new URLSearchParams({ step: "code", email, next, error: r.error });
     redirect(`/login?${p.toString()}`);
   }
+  const user = await getCurrentUser();
+  if (user && user.role !== "admin" && needsRegistration(user)) redirect(`/register?next=${encodeURIComponent(next)}`);
   redirect(next);
 }

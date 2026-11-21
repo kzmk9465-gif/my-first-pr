@@ -1,16 +1,16 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { finalizeEnded, getBids, getListing, isFollowing, minimumBid } from "@/lib/auctions";
-import { getCurrentUser } from "@/lib/auth";
+import { bidStatus, extensionSeconds, finalizeEnded, getBids, getListing, isFavorite, isFollowing, minimumBid } from "@/lib/auctions";
+import { canBid, getCurrentUser, needsRegistration } from "@/lib/auth";
 import { CERTIFICATE_LABELS, siteConfig } from "@/lib/config";
 import { formatDateTime, remaining, yen } from "@/lib/format";
-import { bidAction, followAction } from "./actions";
+import { confirmBidAction, favoriteAction, followAction } from "./actions";
 import Countdown from "@/components/Countdown";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; bid?: string; extended?: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; bid?: string; outcome?: string; price?: string; extended?: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const l = getListing(Number((await params).id));
@@ -28,10 +28,15 @@ export default async function ListingPage({ params, searchParams }: Props) {
   const open = l.status === "open";
   const min = minimumBid(l);
   const top = bids[0];
-  const iAmTop = !!user && top?.user_id === user.id;
+  const st = bidStatus(id, user?.id);
+  const iAmTop = !!user && st.leader_id === user.id;
   const iWon = !!user && l.winner_id === user.id;
   const following = user ? isFollowing(user.id, l.seller_id) : false;
+  const fav = user ? isFavorite(user.id, l.id) : false;
   const back = `/auctions/${l.id}`;
+  const needReg = !!user && needsRegistration(user);
+  const allowed = !!user && canBid(user);
+  const extMin = Math.round(extensionSeconds(l) / 60);
 
   return (
     <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
@@ -86,26 +91,41 @@ export default async function ListingPage({ params, searchParams }: Props) {
           )}
 
           {sp.error && <p className="text-danger text-sm border border-danger/40 rounded p-2">{sp.error}</p>}
-          {sp.bid && (
+          {sp.bid && sp.outcome === "lost" && (
+            <p className="text-danger text-sm border border-danger/40 rounded p-2">
+              上限 {yen(Number(sp.bid))} では他の方の上限に届きませんでした。価格は {yen(Number(sp.price))} になりました。もう一度、より高い上限で挑戦できます。
+            </p>
+          )}
+          {sp.bid && sp.outcome === "raised" && (
+            <p className="text-ok text-sm border border-ok/40 rounded p-2">上限額を {yen(Number(sp.bid))} に引き上げました。あなたが引き続き最高入札者です。</p>
+          )}
+          {sp.bid && sp.outcome === "leading" && (
             <p className="text-ok text-sm border border-ok/40 rounded p-2">
-              {yen(Number(sp.bid))} で入札しました。{sp.extended && "終了間際のため終了時刻が延長されました。"}
+              🏆 上限 {yen(Number(sp.bid))} で入札し、現在 {yen(Number(sp.price))} であなたが最高入札者です。{sp.extended && "終了間際のため終了時刻が延長されました。"}
             </p>
           )}
 
           {open ? (
-            user ? (
-              <form action={bidAction} className="space-y-2">
+            user ? needReg ? (
+              <Link href={`/register?next=${encodeURIComponent(back)}`} className="btn w-full">会員登録して入札</Link>
+            ) : !allowed ? (
+              <p className="text-sm text-muted border border-accent/20 rounded p-2">
+                {user.status === "blocked" ? "このアカウントは入札できません。" : "会員登録の承認待ちです。承認されると入札できます。"}
+              </p>
+            ) : (
+              <form action={confirmBidAction} className="space-y-2">
                 <input type="hidden" name="listing_id" value={l.id} />
                 <label className="block text-sm text-muted">
-                  入札額（{yen(min)} 以上、{yen(l.bid_increment)} 単位）
-                  <input name="amount" type="number" inputMode="numeric" min={min} step={l.bid_increment} defaultValue={min} required className="input mt-1 text-lg" />
+                  上限額（{iAmTop ? `現在の上限 ${yen(st.my_max ?? 0)} より上` : `${yen(min)} 以上`}）
+                  <input name="amount" type="number" inputMode="numeric" min={iAmTop ? (st.my_max ?? 0) + 1 : min} step={1} defaultValue={iAmTop ? (st.my_max ?? 0) + l.bid_increment : min} required className="input mt-1 text-lg" />
                 </label>
                 {iAmTop ? (
-                  <p className="text-xs text-ok">あなたが現在の最高入札者です。</p>
+                  <p className="text-xs text-ok">🏆 あなたが現在の最高入札者です（上限 {yen(st.my_max ?? 0)}）。上限を引き上げられます。</p>
                 ) : (
-                  <p className="text-xs text-muted">終了{Math.round(siteConfig.autoExtendWindowSeconds / 60)}分以内の入札で終了時刻が{Math.round(siteConfig.autoExtendSeconds / 60)}分延長されます。</p>
+                  <p className="text-xs text-muted">「ここまでなら出せる」上限を入れると、他の方の入札に応じて自動で競り上がります（上限を超えることはありません）。</p>
                 )}
-                <button className="btn w-full text-lg">入札する</button>
+                <p className="text-xs text-muted">終了{Math.round(siteConfig.autoExtendWindowSeconds / 60)}分以内の入札で{extMin}分延長{l.sudden_death ? "（サドンデス：回数ごとに短縮）" : ""}。</p>
+                <button className="btn w-full text-lg">入札内容を確認する</button>
               </form>
             ) : (
               <Link href={`/login?next=${encodeURIComponent(back)}`} className="btn w-full">ログインして入札</Link>
@@ -128,8 +148,13 @@ export default async function ListingPage({ params, searchParams }: Props) {
           ) : null}
         </div>
 
-        <div className="card p-4 flex items-center justify-between gap-3">
-          <div className="text-sm">
+        <div className="card p-4 flex flex-wrap items-center justify-between gap-3">
+          <form action={favoriteAction}>
+            <input type="hidden" name="listing_id" value={l.id} />
+            <input type="hidden" name="back" value={back} />
+            <button className={`btn btn-outline !py-1 ${fav ? "!text-danger !border-danger" : ""}`}>{fav ? "♥ お気に入り済み" : "♡ お気に入り"}</button>
+          </form>
+          <div className="text-sm text-right">
             <div className="text-muted text-xs">出品者</div>
             <Link href={`/sellers/${l.seller_slug}`} className="font-bold text-accent-2 hover:underline">{l.seller_name}</Link>
           </div>
@@ -148,7 +173,7 @@ export default async function ListingPage({ params, searchParams }: Props) {
             <ol className="text-sm divide-y divide-accent/10">
               {bids.slice(0, 20).map((b, i) => (
                 <li key={b.id} className="py-1.5 flex justify-between">
-                  <span>{i === 0 && open ? "🏆 " : ""}{user && b.user_id === user.id ? "あなた" : b.bidder_label}</span>
+                  <span>{i === 0 && open ? "🏆 " : ""}{user && b.user_id === user.id ? "あなた" : b.bidder_label}{b.is_auto ? <span className="text-xs text-muted ml-1">(自動)</span> : null}</span>
                   <span className="text-muted">{formatDateTime(b.created_at)}</span>
                   <span className="font-bold">{yen(b.amount)}</span>
                 </li>

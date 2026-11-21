@@ -4,18 +4,8 @@ import { getDb, nowIso } from "./db.ts";
 import { siteConfig } from "./config.ts";
 import { mailProvider, sendMail } from "./mail.ts";
 
-export type User = {
-  id: number;
-  email: string;
-  name: string | null;
-  role: "user" | "admin";
-  line_user_id: string | null;
-  shipping_name: string | null;
-  shipping_postal: string | null;
-  shipping_address: string | null;
-  shipping_phone: string | null;
-  created_at: string;
-};
+export type { User } from "./members.ts";
+import type { User } from "./members.ts";
 
 const SESSION_COOKIE = "banshu_session";
 const SESSION_DAYS = 30;
@@ -74,10 +64,16 @@ export async function verifyOtp(emailRaw: string, code: string): Promise<{ ok: t
   }
   db.prepare("UPDATE otp_codes SET consumed = 1 WHERE id = ?").run(row.id);
 
-  const role = siteConfig.adminEmails.includes(email) ? "admin" : "user";
+  const isAdmin = siteConfig.adminEmails.includes(email);
+  const role = isAdmin ? "admin" : "user";
+  // 管理者は自動承認。承認制オフの場合も登録時点で承認扱い。
+  const status = isAdmin || !siteConfig.requireApproval ? "approved" : "pending";
   db.prepare(
-    "INSERT INTO users (email, role) VALUES (?, ?) ON CONFLICT(email) DO UPDATE SET role = CASE WHEN excluded.role = 'admin' THEN 'admin' ELSE users.role END",
-  ).run(email, role);
+    `INSERT INTO users (email, role, status, approved_at) VALUES (?, ?, ?, ?)
+     ON CONFLICT(email) DO UPDATE SET
+       role = CASE WHEN excluded.role = 'admin' THEN 'admin' ELSE users.role END,
+       status = CASE WHEN excluded.role = 'admin' AND users.status <> 'blocked' THEN 'approved' ELSE users.status END`,
+  ).run(email, role, status, status === "approved" ? nowIso() : null);
   const user = db.prepare("SELECT id FROM users WHERE email = ?").get(email) as { id: number };
 
   const token = randomBytes(32).toString("hex");
@@ -133,3 +129,5 @@ export function updateProfile(
 export function setLineUserId(userId: number, lineUserId: string | null): void {
   getDb().prepare("UPDATE users SET line_user_id = ? WHERE id = ?").run(lineUserId, userId);
 }
+
+export { registerProfile, needsRegistration, canBid, setUserStatus, listMembers } from "./members.ts";

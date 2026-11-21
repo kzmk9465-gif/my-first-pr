@@ -31,7 +31,9 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               {user ? (
                 <>
                   {user.role === "admin" && <Link href="/admin" className="hover:text-accent-2">管理</Link>}
-                  <Link href="/mypage" className="btn btn-outline !py-1 !px-3">マイページ</Link>
+                  <Link href="/mypage" className="btn btn-outline !py-1 !px-3">
+                    マイページ{user.status === "pending" && user.role !== "admin" && <span className="badge badge-hot ml-1">承認待ち</span>}
+                  </Link>
                 </>
               ) : (
                 <Link href="/login" className="btn !py-1 !px-3">ログイン</Link>

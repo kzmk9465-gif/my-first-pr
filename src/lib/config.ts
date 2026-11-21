@@ -9,6 +9,12 @@ export const siteConfig = {
   autoExtendSeconds: Number(process.env.AUTO_EXTEND_SECONDS ?? 300),
   /** 自動延長が発動する残り時間（秒） */
   autoExtendWindowSeconds: Number(process.env.AUTO_EXTEND_WINDOW_SECONDS ?? 300),
+  /** 最短の延長秒数（サドンデス時はここまで縮む） */
+  minExtendSeconds: Number(process.env.MIN_EXTEND_SECONDS ?? 60),
+  /** 新規出品のサドンデス初期値 */
+  suddenDeathDefault: process.env.SUDDEN_DEATH_DEFAULT !== "false",
+  /** 会員承認制（false にすると登録だけで入札可能） */
+  requireApproval: process.env.REQUIRE_APPROVAL !== "false",
   /** デフォルトの入札単位（円） */
   defaultBidIncrement: Number(process.env.DEFAULT_BID_INCREMENT ?? 100),
   /** 管理者として扱うメールアドレス（カンマ区切り） */
