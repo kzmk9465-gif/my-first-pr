@@ -1,0 +1,28 @@
+# Fly.io 用テンプレート。`fly launch --no-deploy` で app 名を埋めてから使うか、
+# app 名を自分のものに書き換えてください。Dockerfile をそのまま使います。
+app = "banshu-oku"      # ← 自分のアプリ名に変更
+primary_region = "nrt"  # 東京
+
+[build]
+  dockerfile = "Dockerfile"
+
+[env]
+  PORT = "3000"
+
+# SQLite とアップロード画像を永続化するボリューム（/data にマウント）
+[[mounts]]
+  source = "banshu_data"
+  destination = "/data"
+
+[http_service]
+  internal_port = 3000
+  force_https = true
+  auto_stop_machines = "suspend"
+  auto_start_machines = true
+  min_machines_running = 1   # SQLiteは1台構成。スケールアウトしないこと
+
+  [http_service.checks]
+    [[http_service.checks.http]]
+      path = "/api/health"
+      interval = "30s"
+      timeout = "5s"

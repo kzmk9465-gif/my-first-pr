@@ -84,3 +84,13 @@ export const CERTIFICATE_LABELS: Record<string, string> = {
   sales: "販売証明",
   bloodline: "繁殖血統",
 };
+
+// 本番で初期値のままだと認証コードのハッシュが推測可能になるため警告する（起動時に一度）
+if (process.env.NODE_ENV === "production") {
+  if (!process.env.OTP_SALT) {
+    console.warn("[banshu] 警告: OTP_SALT が未設定です。本番では長いランダム文字列を必ず設定してください。");
+  }
+  if (!process.env.BASE_URL) {
+    console.warn("[banshu] 警告: BASE_URL が未設定です。決済・LINEのリダイレクトが正しく動かない場合があります。");
+  }
+}

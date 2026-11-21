@@ -1,0 +1,13 @@
+# ローカルやVPSでそのまま起動する用。env ファイルに鍵を入れて docker compose up -d
+services:
+  app:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      - banshu-data:/data
+    restart: unless-stopped
+volumes:
+  banshu-data:

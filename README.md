@@ -49,7 +49,9 @@ npm run dev                 # http://localhost:3000
 - 管理者にしたいメールアドレスを `.env` の `ADMIN_EMAILS` に設定し、そのアドレスでログインすると「管理」メニューが出ます。
 - メール送信（`SMTP_*`）が未設定の間は、認証コードがサーバーログに出力され、開発モードでは画面にも表示されます。
 
-本番は `npm run build && npm start` です。`DATABASE_PATH` の SQLite ファイルを永続化してください。
+本番は `npm run build && npm start` です。 コンテナで公開する場合は `Dockerfile` / `docker-compose.yml` を同梱しています（`docker compose up -d`）。
+
+**本番公開（開業）の手順**は [`docs/デプロイ手順と開業チェックリスト.md`](docs/デプロイ手順と開業チェックリスト.md) に、社長が順にやるだけのチェックリストとしてまとめています。`DATABASE_PATH` の SQLite ファイルを永続化してください。
 
 ## テスト
 
