@@ -76,6 +76,18 @@ export default async function SellerNewListingPage({ searchParams }: { searchPar
             </ul>
           </details>
         )}
+        <fieldset className="border border-accent/20 rounded p-3 space-y-2">
+          <legend className="px-1 text-xs text-muted">特殊オークション（任意）</legend>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">🌑 闇市（入札できる最低ランク）
+              <select name="min_rank" className="input mt-1" defaultValue={0}>
+                {siteConfig.ranks.map((r) => <option key={r.level} value={r.level}>{r.level === 0 ? "制限なし" : `${r.name}以上（累計 ${r.min.toLocaleString()}円〜）`}</option>)}
+              </select>
+            </label>
+            <label className="block">🔒 限定（合言葉）<input name="passphrase" className="input mt-1" placeholder="空欄で制限なし" autoComplete="off" /></label>
+          </div>
+          <label className="flex items-center gap-2"><input type="checkbox" name="mystery" /> 📦 千両箱（画像をシルエット表示。中身は落札者だけが見られます）</label>
+        </fieldset>
         <div className="flex flex-wrap gap-4">
           <label className="flex items-center gap-2"><input type="checkbox" name="sudden_death" defaultChecked={siteConfig.suddenDeathDefault} /> サドンデス延長</label>
           <label className="flex items-center gap-2"><input type="checkbox" name="continue" /> 連続出品（保存後もこの画面に戻る）</label>

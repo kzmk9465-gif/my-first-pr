@@ -21,6 +21,15 @@ export const siteConfig = {
     .map((s) => s.split(":"))
     .filter((p) => p.length === 2)
     .map(([key, rate]) => ({ key: key.trim(), rate: Number(rate) })),
+  /** 会員ランク（累計落札額の下限:名前）。例 RANKS="0:見習い,10000:常連,50000:上客,200000:名人" */
+  ranks: (process.env.RANKS ?? "0:見習い,10000:常連,50000:上客,200000:名人")
+    .split(",")
+    .map((s) => s.split(":"))
+    .filter((p) => p.length === 2)
+    .map(([min, name], i) => ({ level: i, min: Number(min), name: name.trim() }))
+    .sort((a, b) => a.min - b.min),
+  /** 二次販売証明の発行料（円）。0 で無料 */
+  secondaryCertFee: Number(process.env.SECONDARY_CERT_FEE ?? 0),
   /** 画像アップロードの保存先 */
   uploadDir: process.env.UPLOAD_DIR ?? "",
   /** デフォルトの入札単位（円） */

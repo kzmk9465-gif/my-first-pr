@@ -94,6 +94,9 @@ export async function sellerCreateListingAction(formData: FormData): Promise<voi
     fee_rate: seller.fee_rate,
     created_by: user.id,
     needs_review: user.role !== "admin",
+    min_rank: Math.max(0, Number(str(formData, "min_rank")) || 0),
+    passphrase: str(formData, "passphrase", 60),
+    mystery: formData.get("mystery") === "on",
   });
   revalidatePath("/sell/dashboard");
   const again = formData.get("continue") === "on";

@@ -3,6 +3,7 @@ import { siteConfig } from "./config.ts";
 import { notifyUser } from "./notify.ts";
 import { yen } from "./format.ts";
 import { createOrder } from "./sellers.ts";
+import { createHash } from "node:crypto";
 
 export type Seller = { id: number; name: string; slug: string; description: string | null };
 
@@ -33,6 +34,9 @@ export type Listing = {
   shipping_fee: number;
   fee_rate: number;
   created_by: number | null;
+  min_rank: number;
+  passphrase_hash: string | null;
+  mystery: number;
   featured: number;
   hot: number;
   extended_count: number;
@@ -281,6 +285,36 @@ export async function placeBid(listingId: number, userId: number, amount: number
   return result;
 }
 
+/* ---------- 第3段階：限定オークション（合言葉）・千両箱 ---------- */
+
+export function hashPassphrase(p: string): string {
+  const salt = process.env.OTP_SALT ?? "banshu-dev-salt";
+  return createHash("sha256").update(`${salt}:pass:${p.trim()}`).digest("hex");
+}
+
+export function isUnlocked(userId: number, listingId: number): boolean {
+  return !!getDb().prepare("SELECT 1 FROM listing_unlocks WHERE user_id = ? AND listing_id = ?").get(userId, listingId);
+}
+
+/** 合言葉を照合して解錠。 */
+export function unlockListing(userId: number, listingId: number, passphrase: string): boolean {
+  const l = getDb().prepare("SELECT passphrase_hash FROM listings WHERE id = ?").get(listingId) as { passphrase_hash: string | null } | undefined;
+  if (!l) return false;
+  if (!l.passphrase_hash) return true;
+  if (l.passphrase_hash !== hashPassphrase(passphrase)) return false;
+  getDb().prepare("INSERT OR IGNORE INTO listing_unlocks (user_id, listing_id) VALUES (?, ?)").run(userId, listingId);
+  return true;
+}
+
+/** 千両箱の中身を見られる人か（落札者・出品者本人・管理者） */
+export function canRevealMystery(l: Pick<Listing, "mystery" | "winner_id" | "seller_id" | "status">, user: { id: number; role: string } | null, mySellerId: number | null): boolean {
+  if (!l.mystery) return true;
+  if (!user) return false;
+  if (user.role === "admin") return true;
+  if (mySellerId === l.seller_id) return true;
+  return l.status === "ended" && l.winner_id === user.id;
+}
+
 /** 現在のトップ入札者と自分の上限 */
 export function bidStatus(listingId: number, userId?: number): { leader_id: number | null; my_max: number | null } {
   const db = getDb();
@@ -414,6 +448,12 @@ export type ListingInput = {
   created_by?: number;
   /** true なら管理者の確認待ち（公開されない） */
   needs_review?: boolean;
+  /** 闇市：このランク以上のみ入札可 */
+  min_rank?: number;
+  /** 限定オークション：合言葉 */
+  passphrase?: string;
+  /** 千両箱：画像をシルエット表示 */
+  mystery?: boolean;
 };
 
 export async function createListing(input: ListingInput): Promise<number> {
@@ -422,8 +462,8 @@ export async function createListing(input: ListingInput): Promise<number> {
     .prepare(
       `INSERT INTO listings (seller_id, title, variety, breeder, certificate, quantity, description, image_url,
          start_price, current_price, bid_increment, starts_at, ends_at, status, featured, hot, sudden_death,
-         buyout_price, subtitle, images, video_url, shipping_method, shipping_fee, fee_rate, created_by)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         buyout_price, subtitle, images, video_url, shipping_method, shipping_fee, fee_rate, created_by, min_rank, passphrase_hash, mystery)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       input.seller_id,
@@ -451,6 +491,9 @@ export async function createListing(input: ListingInput): Promise<number> {
       input.shipping_fee ?? 0,
       input.fee_rate ?? 0,
       input.created_by ?? null,
+      input.min_rank ?? 0,
+      input.passphrase ? hashPassphrase(input.passphrase) : null,
+      input.mystery ? 1 : 0,
     );
   const id = Number(r.lastInsertRowid);
   if (status === "review") return id;

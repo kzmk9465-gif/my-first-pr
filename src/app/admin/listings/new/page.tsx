@@ -42,12 +42,27 @@ export default async function NewListingPage({ searchParams }: { searchParams: P
             </select>
           </label>
           <label className="block">開始価格（円） *<input name="start_price" type="number" min={1} required defaultValue={1000} className="input mt-1" /></label>
+          <label className="block">即決価格（円・任意）<input name="buyout_price" type="number" min={1} className="input mt-1" placeholder="空欄で即決なし" /></label>
           <label className="block">入札単位（円）<input name="bid_increment" type="number" min={1} defaultValue={siteConfig.defaultBidIncrement} className="input mt-1" /></label>
+          <label className="block">サブタイトル<input name="subtitle" className="input mt-1" placeholder="補足説明（任意）" /></label>
+          <label className="block">YouTube動画URL<input name="video_url" type="url" className="input mt-1" placeholder="https://youtu.be/..." /></label>
           <label className="block">開始日時（空欄で即時）<input name="starts_at" type="datetime-local" className="input mt-1" /></label>
           <label className="block">終了日時 *<input name="ends_at" type="datetime-local" required defaultValue={defaultEnd} className="input mt-1" /></label>
         </div>
         <label className="block">画像URL<input name="image_url" type="url" className="input mt-1" placeholder="https://..." /></label>
         <label className="block">説明<textarea name="description" rows={6} className="input mt-1" placeholder="サイズ、特徴、発送方法、死着保証の有無など" /></label>
+        <fieldset className="border border-accent/20 rounded p-3 space-y-2">
+          <legend className="px-1 text-xs text-muted">特殊オークション（任意）</legend>
+          <div className="grid grid-cols-2 gap-3">
+            <label className="block">🌑 闇市（入札できる最低ランク）
+              <select name="min_rank" className="input mt-1" defaultValue={0}>
+                {siteConfig.ranks.map((r) => <option key={r.level} value={r.level}>{r.level === 0 ? "制限なし" : `${r.name}以上（累計 ${r.min.toLocaleString()}円〜）`}</option>)}
+              </select>
+            </label>
+            <label className="block">🔒 限定（合言葉）<input name="passphrase" className="input mt-1" placeholder="空欄で制限なし" autoComplete="off" /></label>
+          </div>
+          <label className="flex items-center gap-2"><input type="checkbox" name="mystery" /> 📦 千両箱（画像をシルエット表示。中身は落札者だけが見られます）</label>
+        </fieldset>
         <div className="flex gap-6">
           <label className="flex items-center gap-2"><input type="checkbox" name="featured" /> ⭐注目として先頭に表示</label>
           <label className="flex items-center gap-2"><input type="checkbox" name="hot" /> 🔥マークを付ける</label>

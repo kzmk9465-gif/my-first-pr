@@ -11,6 +11,8 @@ import { completeOrderAction, linkLineAction, logoutAction, markReadAction, upda
 import { ordersForBuyer } from "@/lib/sellers";
 import { ORDER_STATUS_LABELS } from "@/lib/config";
 import { getSellerForUser } from "@/lib/sellers";
+import { userRank } from "@/lib/ranks";
+import { myCertificates } from "@/lib/certificates";
 
 export const metadata: Metadata = { title: "マイページ" };
 export const dynamic = "force-dynamic";
@@ -28,6 +30,8 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
   const favs = myFavorites(user.id);
   const orders = ordersForBuyer(user.id);
   const sellerAcc = getSellerForUser(user.id);
+  const rank = userRank(user.id);
+  const certs = myCertificates(user.id);
   const STEPS: { key: string; label: string }[] = [
     { key: "awaiting_payment", label: "お手続き・お支払い" },
     { key: "paid", label: "入金の確認" },
@@ -115,6 +119,16 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
         )}
       </section>
 
+      <section className="card p-4 text-sm flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <div className="text-xs text-muted">会員ランク</div>
+          <div className="text-xl font-black text-accent-2">{rank.rank.name} <span className="text-xs text-muted font-normal">累計落札 {yen(rank.total)}</span></div>
+        </div>
+        <div className="text-xs text-muted">
+          {rank.next ? <>次のランク「{rank.next.name}」まであと {yen(rank.toNext)}。ランクが上がると🌑闇市などの限定オークションに参加できます。</> : "最高ランクです。すべての闇市に参加できます。"}
+        </div>
+      </section>
+
       {sellerAcc && (
         <p className="text-sm border border-accent/30 rounded p-3 flex flex-wrap items-center justify-between gap-2">
           <span>出品者アカウント「{sellerAcc.name}」が有効です。</span>
@@ -200,6 +214,20 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
               })}
             </tbody>
           </table>
+        )}
+      </section>
+
+      <section className="card p-4" id="certs">
+        <h2 className="font-bold text-accent-2 mb-2">📜 マイ証明一覧</h2>
+        {certs.length === 0 ? <p className="text-sm text-muted">落札した個体の販売証明書は、ご入金確認後に出品ページから発行できます。</p> : (
+          <ul className="text-sm divide-y divide-accent/10">
+            {certs.map((c) => (
+              <li key={c.id} className="py-2 flex flex-wrap justify-between gap-2">
+                <span><Link href={`/certificates/${c.code}`} className="font-mono underline">{c.code}</Link> {c.title}</span>
+                <span className={`badge ${c.status === "issued" ? "badge-ok" : c.status === "pending" ? "badge-hot" : ""}`}>{c.type === "sale" ? "落札販売証明" : "二次販売証明"}{c.status === "pending" ? "（確認待ち）" : c.status === "rejected" ? "（却下）" : ""}</span>
+              </li>
+            ))}
+          </ul>
         )}
       </section>
 

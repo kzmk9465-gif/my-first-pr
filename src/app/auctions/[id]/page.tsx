@@ -1,18 +1,21 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { bidStatus, extensionSeconds, finalizeEnded, getBids, getListing, isFavorite, isFollowing, listingImages, minimumBid } from "@/lib/auctions";
+import { bidStatus, canRevealMystery, extensionSeconds, finalizeEnded, getBids, getListing, isFavorite, isFollowing, isUnlocked, listingImages, minimumBid } from "@/lib/auctions";
 import { getSellerForUser } from "@/lib/sellers";
 import Gallery from "@/components/Gallery";
 import { canBid, getCurrentUser, needsRegistration } from "@/lib/auth";
 import { CERTIFICATE_LABELS, siteConfig } from "@/lib/config";
 import { formatDateTime, remaining, yen } from "@/lib/format";
-import { confirmBidAction, favoriteAction, followAction } from "./actions";
+import { confirmBidAction, favoriteAction, followAction, issueCertificateAction, unlockAction } from "./actions";
+import { userRank, rankByLevel } from "@/lib/ranks";
+import { certificateForListing } from "@/lib/certificates";
+import { getOrder } from "@/lib/sellers";
 import Countdown from "@/components/Countdown";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; bid?: string; outcome?: string; price?: string; extended?: string; bought?: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; bid?: string; outcome?: string; price?: string; extended?: string; bought?: string; unlocked?: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const l = getListing(Number((await params).id));
@@ -31,7 +34,14 @@ export default async function ListingPage({ params, searchParams }: Props) {
     const mine = user ? getSellerForUser(user.id)?.id === l.seller_id : false;
     if (!user || (user.role !== "admin" && !mine)) notFound();
   }
+  const mySellerId = user ? (getSellerForUser(user.id)?.id ?? null) : null;
+  const reveal = canRevealMystery(l, user, mySellerId);
   const images = listingImages(l);
+  const myRank = user ? userRank(user.id) : null;
+  const rankOk = !l.min_rank || (user?.role === "admin") || (myRank ? myRank.rank.level >= l.min_rank : false);
+  const unlocked = !l.passphrase_hash || (user ? user.role === "admin" || isUnlocked(user.id, l.id) : false);
+  const order = l.status === "ended" && l.winner_id ? getOrder(l.id) : null;
+  const cert = l.status === "ended" ? certificateForListing(l.id) : null;
   const ytId = l.video_url?.match(/(?:v=|youtu\.be\/|shorts\/)([A-Za-z0-9_-]{6,})/)?.[1];
   const canBuyout = !!l.buyout_price && l.status === "open" && l.current_price < l.buyout_price;
   const bids = getBids(id);
@@ -52,7 +62,8 @@ export default async function ListingPage({ params, searchParams }: Props) {
     <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
       <div className="space-y-4">
         <nav className="text-xs text-muted"><Link href="/auctions" className="hover:text-accent-2">オークション一覧</Link> › ID:{l.id}</nav>
-        <Gallery images={images} title={l.title} />
+        <Gallery images={images} title={l.title} silhouette={!reveal} />
+        {l.mystery && !reveal && <p className="text-xs text-muted text-center">📦 千両箱：中身は落札してからのお楽しみ。画像はシルエットで表示しています。</p>}
         {ytId && (
           <div className="card overflow-hidden aspect-video">
             <iframe className="h-full w-full" src={`https://www.youtube-nocookie.com/embed/${ytId}?rel=0&playsinline=1&modestbranding=1`} title="出品動画" allow="encrypted-media; picture-in-picture" allowFullScreen loading="lazy" />
@@ -84,6 +95,9 @@ export default async function ListingPage({ params, searchParams }: Props) {
             {l.featured ? <span className="badge badge-star">⭐注目</span> : null}
             {l.hot ? <span className="badge badge-hot">🔥</span> : null}
             {l.status === "review" && <span className="badge badge-hot">確認待ち（非公開）</span>}
+            {l.min_rank > 0 && <span className="badge badge-hot">🌑 闇市：{rankByLevel(l.min_rank).name}以上</span>}
+            {l.passphrase_hash && <span className="badge badge-star">🔒 限定（合言葉）</span>}
+            {l.mystery ? <span className="badge badge-star">📦 千両箱</span> : null}
             {l.status === "scheduled" && <span className="badge">開催前</span>}
             {l.status === "ended" && <span className="badge">終了</span>}
             {l.status === "cancelled" && <span className="badge">取消</span>}
@@ -103,6 +117,7 @@ export default async function ListingPage({ params, searchParams }: Props) {
           )}
 
           {sp.error && <p className="text-danger text-sm border border-danger/40 rounded p-2">{sp.error}</p>}
+          {sp.unlocked && <p className="text-ok text-sm border border-ok/40 rounded p-2">🔓 合言葉を確認しました。入札できます。</p>}
           {sp.bought && <p className="text-ok text-sm border border-ok/40 rounded p-2">🏆 即決価格 {yen(Number(sp.bought))} で落札しました。<Link href="/mypage#orders" className="underline">マイページの「取引のいま」</Link>からお支払い手続きへお進みください。</p>}
           {sp.bid && sp.outcome === "lost" && (
             <p className="text-danger text-sm border border-danger/40 rounded p-2">
@@ -125,6 +140,17 @@ export default async function ListingPage({ params, searchParams }: Props) {
               <p className="text-sm text-muted border border-accent/20 rounded p-2">
                 {user.status === "blocked" ? "このアカウントは入札できません。" : "会員登録の承認待ちです。承認されると入札できます。"}
               </p>
+            ) : !rankOk ? (
+              <p className="text-sm text-muted border border-accent/20 rounded p-2">
+                🌑 この出品は闇市です。会員ランク「{rankByLevel(l.min_rank).name}」以上の方のみ入札できます（あなたは「{myRank?.rank.name}」、累計 {yen(myRank?.total ?? 0)}）。
+              </p>
+            ) : !unlocked ? (
+              <form action={unlockAction} className="space-y-2 border border-accent/30 rounded p-3">
+                <input type="hidden" name="listing_id" value={l.id} />
+                <p className="text-sm">🔒 限定オークションです。合言葉を入力してください。</p>
+                <input name="passphrase" required className="input" placeholder="合言葉" autoComplete="off" />
+                <button className="btn w-full">合言葉を送る</button>
+              </form>
             ) : (
               <form action={confirmBidAction} className="space-y-2">
                 <input type="hidden" name="listing_id" value={l.id} />
@@ -138,6 +164,7 @@ export default async function ListingPage({ params, searchParams }: Props) {
                   <p className="text-xs text-muted">「ここまでなら出せる」上限を入れると、他の方の入札に応じて自動で競り上がります（上限を超えることはありません）。</p>
                 )}
                 <p className="text-xs text-muted">終了{Math.round(siteConfig.autoExtendWindowSeconds / 60)}分以内の入札で{extMin}分延長{l.sudden_death ? "（サドンデス：回数ごとに短縮）" : ""}。</p>
+                {myRank && <p className="text-xs text-muted">あなたのランク：<b className="text-accent-2">{myRank.rank.name}</b>（累計 {yen(myRank.total)}）</p>}
                 <button className="btn w-full text-lg">入札内容を確認する</button>
                 {canBuyout && (
                   <Link href={`/auctions/${l.id}/buyout`} className="btn btn-outline w-full">即決 {yen(l.buyout_price!)} で落札する</Link>
@@ -154,9 +181,16 @@ export default async function ListingPage({ params, searchParams }: Props) {
                 <p className="text-muted">入札はありませんでした。</p>
               )}
               {iWon && (
-                <p className="mt-2 text-ok">
-                  おめでとうございます。お支払いは{siteConfig.payment.method}です。<Link href="/mypage" className="underline">マイページ</Link>で発送先をご確認ください。
-                </p>
+                <div className="mt-2 space-y-2">
+                  <p className="text-ok">おめでとうございます。<Link href="/mypage?received=#orders" className="underline">マイページの「取引のいま」</Link>からお支払い手続きへお進みください。</p>
+                  {cert ? (
+                    <Link href={`/certificates/${cert.code}`} className="btn btn-outline w-full">📜 落札販売証明書を見る（{cert.code}）</Link>
+                  ) : order && ["paid", "shipped", "completed"].includes(order.status) ? (
+                    <form action={issueCertificateAction}><input type="hidden" name="listing_id" value={l.id} /><button className="btn w-full">📜 落札販売証明書を発行</button></form>
+                  ) : (
+                    <p className="text-xs text-muted">📜 落札販売証明書は、ご入金の確認後にここから発行できます。</p>
+                  )}
+                </div>
               )}
             </div>
           ) : l.status === "scheduled" ? (

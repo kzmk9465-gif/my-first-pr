@@ -131,6 +131,31 @@ CREATE TABLE IF NOT EXISTS listing_templates (
   body TEXT NOT NULL,
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
+CREATE TABLE IF NOT EXISTS certificates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  code TEXT NOT NULL UNIQUE,
+  type TEXT NOT NULL DEFAULT 'sale',
+  status TEXT NOT NULL DEFAULT 'issued',
+  listing_id INTEGER REFERENCES listings(id) ON DELETE SET NULL,
+  parent_id INTEGER REFERENCES certificates(id),
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  holder_name TEXT,
+  title TEXT NOT NULL,
+  variety TEXT,
+  breeder TEXT,
+  seller_name TEXT,
+  price INTEGER,
+  note TEXT,
+  issued_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_certificates_user ON certificates(user_id);
+CREATE TABLE IF NOT EXISTS listing_unlocks (
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  PRIMARY KEY (user_id, listing_id)
+);
 CREATE TABLE IF NOT EXISTS favorites (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
@@ -162,6 +187,10 @@ const COLUMN_MIGRATIONS: [table: string, column: string, ddl: string][] = [
   ["listings", "shipping_fee", "INTEGER NOT NULL DEFAULT 0"],
   ["listings", "fee_rate", "INTEGER NOT NULL DEFAULT 0"],
   ["listings", "created_by", "INTEGER REFERENCES users(id)"],
+  // 第3段階：闇市・限定・千両箱
+  ["listings", "min_rank", "INTEGER NOT NULL DEFAULT 0"],
+  ["listings", "passphrase_hash", "TEXT"],
+  ["listings", "mystery", "INTEGER NOT NULL DEFAULT 0"],
 ];
 
 function migrate(db: DatabaseSync): void {

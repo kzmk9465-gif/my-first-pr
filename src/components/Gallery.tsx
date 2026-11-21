@@ -3,7 +3,8 @@
 import { useState } from "react";
 
 /** 画像ギャラリー。複数枚はサムネイルで切り替え、左右スワイプにも対応。 */
-export default function Gallery({ images, title }: { images: string[]; title: string }) {
+export default function Gallery({ images, title, silhouette = false }: { images: string[]; title: string; silhouette?: boolean }) {
+  const imgStyle = silhouette ? { filter: "brightness(0) contrast(1.2) blur(2px)", opacity: 0.85 } : undefined;
   const [i, setI] = useState(0);
   const [touchX, setTouchX] = useState<number | null>(null);
   if (images.length === 0) {
@@ -18,7 +19,7 @@ export default function Gallery({ images, title }: { images: string[]; title: st
         onTouchEnd={(e) => { if (touchX !== null) { const dx = e.changedTouches[0].clientX - touchX; if (Math.abs(dx) > 40) go(dx < 0 ? 1 : -1); } setTouchX(null); }}
       >
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src={images[i]} alt={`${title} ${i + 1}`} className="h-full w-full object-contain" />
+        <img src={images[i]} alt={silhouette ? "千両箱（シルエット）" : `${title} ${i + 1}`} className="h-full w-full object-contain" style={imgStyle} />
         {images.length > 1 && (
           <>
             <button type="button" aria-label="前の画像" onClick={() => go(-1)} className="absolute left-2 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-background/70 text-accent-2">‹</button>
@@ -31,7 +32,7 @@ export default function Gallery({ images, title }: { images: string[]; title: st
         <div className="flex gap-2 overflow-x-auto">
           {images.map((src, n) => (
             // eslint-disable-next-line @next/next/no-img-element
-            <img key={src + n} src={src} alt="" onClick={() => setI(n)} className={`h-16 w-20 object-cover rounded cursor-pointer border ${n === i ? "border-accent" : "border-transparent opacity-70"}`} />
+            <img key={src + n} src={src} alt="" onClick={() => setI(n)} style={imgStyle} className={`h-16 w-20 object-cover rounded cursor-pointer border ${n === i ? "border-accent" : "border-transparent opacity-70"}`} />
           ))}
         </div>
       )}

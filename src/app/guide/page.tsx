@@ -35,6 +35,19 @@ export default function GuidePage() {
         <p>{siteConfig.legal.shippingFee} 生体のため、死着保証の条件は各出品の説明欄をご確認ください。</p>
       </section>
       <section>
+        <h2 className="font-bold text-accent-2 mb-1">4-2. 落札販売証明書と系図</h2>
+        <p>落札した個体には、ご入金の確認後に出品ページから「落札販売証明書」を発行できます（証明番号つき。印刷・保存可）。証明番号から本サイト上で本物かどうかを照合でき、落札した個体から殖やした子を売るときは「二次販売証明」を申請できます（お店が確認して発行。親の証明とのつながりが系図として残ります）。</p>
+      </section>
+      <section>
+        <h2 className="font-bold text-accent-2 mb-1">4-3. 会員ランクと特殊オークション</h2>
+        <ul className="list-disc pl-5 space-y-1">
+          <li><b>会員ランク</b>：累計落札額に応じて{siteConfig.ranks.map((r) => r.name).join("→")}と上がります。マイページで確認できます。</li>
+          <li><b>🌑 闇市</b>：一定以上のランクの方だけが入札できる上級者向けオークションです。</li>
+          <li><b>🔒 限定オークション</b>：合言葉を入力した方だけが入札できます。</li>
+          <li><b>📦 千両箱</b>：中身が秘密のオークション。画像はシルエットで表示され、落札した方だけが中身を見られます。</li>
+        </ul>
+      </section>
+      <section>
         <h2 className="font-bold text-accent-2 mb-1">5. 証明マークについて</h2>
         <ul className="list-disc pl-5 space-y-1">
           <li><b>原作出証明</b>：作出者本人、または作出者からの委託による出品です。</li>

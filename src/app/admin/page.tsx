@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser, listMembers } from "@/lib/auth";
 import { endedWithWinners, finalizeEnded, getUserById, listListings, reviewListings } from "@/lib/auctions";
 import { getOrder } from "@/lib/sellers";
+import { pendingSecondaryCertificates } from "@/lib/certificates";
 import { ORDER_STATUS_LABELS } from "@/lib/config";
 import { formatDateTime, yen } from "@/lib/format";
 import { cancelListingAction, publishListingAction, rejectListingAction } from "./actions";
@@ -19,6 +20,7 @@ export default async function AdminPage() {
   const open = listListings({ tab: "open", limit: 200 });
   const pendingCount = listMembers("pending").length;
   const review = reviewListings();
+  const pendingCerts = pendingSecondaryCertificates().length;
   const ended = endedWithWinners(50);
 
   return (
@@ -28,6 +30,7 @@ export default async function AdminPage() {
         <div className="flex gap-2">
           <Link href="/admin/members" className="btn btn-outline">会員管理{pendingCount > 0 && <span className="badge badge-hot ml-1">{pendingCount}</span>}</Link>
           <Link href="/admin/sellers" className="btn btn-outline">出品者管理</Link>
+          <Link href="/admin/certificates" className="btn btn-outline">証明書{pendingCerts > 0 && <span className="badge badge-hot ml-1">{pendingCerts}</span>}</Link>
           <Link href="/admin/listings/new" className="btn">＋ 新規出品</Link>
         </div>
       </div>

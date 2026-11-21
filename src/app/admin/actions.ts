@@ -25,11 +25,13 @@ export async function createListingAction(formData: FormData): Promise<void> {
   const startsRaw = str(formData, "starts_at");
   const endsRaw = str(formData, "ends_at");
   const startPrice = Number(str(formData, "start_price"));
+  const buyout = Number(str(formData, "buyout_price")) || null;
   const increment = Number(str(formData, "bid_increment")) || siteConfig.defaultBidIncrement;
   const fail = (msg: string) => redirect(`/admin/listings/new?error=${encodeURIComponent(msg)}`);
   if (!str(formData, "title")) fail("タイトルは必須です。");
   if (!Number(str(formData, "seller_id"))) fail("出品者を選択してください。");
   if (!Number.isInteger(startPrice) || startPrice <= 0) fail("開始価格は1円以上の整数で入力してください。");
+  if (buyout !== null && buyout <= startPrice) fail("即決価格は開始価格より高くしてください。");
   if (!endsRaw) fail("終了日時は必須です。");
   const starts_at = startsRaw ? fromLocalInputValue(startsRaw) : new Date().toISOString();
   const ends_at = fromLocalInputValue(endsRaw);
@@ -50,6 +52,12 @@ export async function createListingAction(formData: FormData): Promise<void> {
     featured: formData.get("featured") === "on",
     hot: formData.get("hot") === "on",
     sudden_death: formData.get("sudden_death") === "on",
+    buyout_price: buyout,
+    subtitle: str(formData, "subtitle", 120),
+    video_url: str(formData, "video_url", 300),
+    min_rank: Math.max(0, Number(str(formData, "min_rank")) || 0),
+    passphrase: str(formData, "passphrase", 60),
+    mystery: formData.get("mystery") === "on",
   });
   revalidatePath("/auctions");
   redirect(`/auctions/${id}`);
@@ -133,4 +141,12 @@ export async function sellerAccountAction(formData: FormData): Promise<void> {
   if (pin) p.set("pin", pin);
   p.set("seller", String(sellerId));
   redirect(`/admin/sellers?${p.toString()}`);
+}
+
+export async function reviewCertificateAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const { reviewSecondaryCertificate } = await import("@/lib/certificates");
+  await reviewSecondaryCertificate(Number(formData.get("id")), String(formData.get("decision")) === "approve");
+  revalidatePath("/admin/certificates");
+  redirect("/admin/certificates");
 }

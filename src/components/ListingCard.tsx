@@ -12,7 +12,7 @@ export default function ListingCard({ l, fav = false, back }: { l: Listing; fav?
         <Link href={`/auctions/${l.id}`} className="block relative aspect-[4/3] bg-surface-2">
           {l.image_url ? (
             // eslint-disable-next-line @next/next/no-img-element
-            <img src={l.image_url} alt={l.title} className="h-full w-full object-cover" loading="lazy" />
+            <img src={l.image_url} alt={l.mystery ? "千両箱" : l.title} className="h-full w-full object-cover" loading="lazy" style={l.mystery ? { filter: "brightness(0) contrast(1.2) blur(2px)", opacity: 0.85 } : undefined} />
           ) : (
             <div className="h-full w-full flex items-center justify-center text-muted text-sm">画像なし</div>
           )}
@@ -38,6 +38,9 @@ export default function ListingCard({ l, fav = false, back }: { l: Listing; fav?
         <h3 className="font-bold leading-snug">
           {l.featured ? <span className="badge badge-star mr-1">⭐注目</span> : null}
           {l.hot ? <span className="badge badge-hot mr-1">🔥</span> : null}
+          {l.min_rank > 0 ? <span className="badge badge-hot mr-1">🌑闇市</span> : null}
+          {l.passphrase_hash ? <span className="badge badge-star mr-1">🔒限定</span> : null}
+          {l.mystery ? <span className="badge badge-star mr-1">📦千両箱</span> : null}
           <Link href={`/auctions/${l.id}`} className="hover:text-accent-2">{l.title}</Link>
           <span className="text-muted text-xs ml-1">[ID:{l.id}]</span>
         </h3>
