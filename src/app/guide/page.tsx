@@ -64,6 +64,15 @@ export default function GuidePage() {
         <p>出品者ページの☆を押すと、その出品者が新しく出品したときにお知らせします。出品カードの♡でお気に入りに登録でき、マイページでまとめて見られます。</p>
       </section>
       <section>
+        <h2 className="font-bold text-accent-2 mb-1">6-2. 図鑑・品評会・ガチャ</h2>
+        <ul className="list-disc pl-5 space-y-1">
+          <li><a href="/zukan" className="underline">メダカ図鑑</a>：品種とブリーダーのデータベース。承認済み会員はご自身の作出品種を登録できます（お店の確認後に掲載）。</li>
+          <li><a href="/contests" className="underline">品評会</a>：自慢の個体をエントリーし、会員の投票で順位を決めます。</li>
+          <li>ガチャ：マイページで毎日ログインボーナスを受け取り、10ポイントで1回挑戦。当選すると景品をお送りします。</li>
+          <li>不審な出品を見つけたら、出品ページの「奉行所へ通報する」からお知らせください。</li>
+        </ul>
+      </section>
+      <section>
         <h2 className="font-bold text-accent-2 mb-1">7. 出品したい方へ</h2>
         <p>承認された会員は、お店の出品者登録を受けるとご自身で出品できます。手数料プランは{siteConfig.feePlans.map((p) => `${p.rate}%`).join("／")}から選べ、出品はお店の確認後に公開されます。詳しくは<a href="/sell" className="underline">出品者メニュー</a>をご覧ください。</p>
       </section>

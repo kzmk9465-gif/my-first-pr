@@ -116,3 +116,13 @@ export async function issueCertificateAction(formData: FormData): Promise<void> 
   revalidatePath("/mypage");
   redirect(`/certificates/${r.cert.code}`);
 }
+
+/** 奉行所（管理者）へ通報 */
+export async function reportAction(formData: FormData): Promise<void> {
+  const listingId = Number(formData.get("listing_id"));
+  const user = await getCurrentUser();
+  if (!user) redirect(`/login?next=/auctions/${listingId}`);
+  const { reportListing } = await import("@/lib/reports");
+  const r = reportListing(listingId, user.id, String(formData.get("reason") ?? ""));
+  redirect(r.ok ? `/auctions/${listingId}?reported=1` : `/auctions/${listingId}?error=${encodeURIComponent(r.error)}`);
+}

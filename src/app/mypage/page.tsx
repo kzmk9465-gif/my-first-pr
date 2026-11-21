@@ -7,7 +7,9 @@ import ListingCard from "@/components/ListingCard";
 import Countdown from "@/components/Countdown";
 import { siteConfig } from "@/lib/config";
 import { formatDateTime, yen } from "@/lib/format";
-import { completeOrderAction, linkLineAction, logoutAction, markReadAction, updateProfileAction } from "./actions";
+import { completeOrderAction, gachaAction, linkLineAction, loginBonusAction, logoutAction, markReadAction, updateProfileAction } from "./actions";
+import { GACHA_COST, bonusClaimedToday, myResults, points } from "@/lib/gacha";
+import { lineLoginEnabled } from "@/lib/line-login";
 import { ordersForBuyer } from "@/lib/sellers";
 import { ORDER_STATUS_LABELS } from "@/lib/config";
 import { getSellerForUser } from "@/lib/sellers";
@@ -17,7 +19,7 @@ import { myCertificates } from "@/lib/certificates";
 export const metadata: Metadata = { title: "マイページ" };
 export const dynamic = "force-dynamic";
 
-export default async function MyPage({ searchParams }: { searchParams: Promise<{ saved?: string; received?: string }> }) {
+export default async function MyPage({ searchParams }: { searchParams: Promise<{ saved?: string; received?: string; bonus?: string; gacha?: string; won?: string; gacha_error?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/mypage");
   const sp = await searchParams;
@@ -32,6 +34,9 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
   const sellerAcc = getSellerForUser(user.id);
   const rank = userRank(user.id);
   const certs = myCertificates(user.id);
+  const pts = points(user.id);
+  const claimed = bonusClaimedToday(user.id);
+  const gachaLog = myResults(user.id, 5);
   const STEPS: { key: string; label: string }[] = [
     { key: "awaiting_payment", label: "お手続き・お支払い" },
     { key: "paid", label: "入金の確認" },
@@ -87,6 +92,7 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
                 <li>下の欄に貼り付けて保存</li>
               </ol>
             )}
+            {lineLoginEnabled() && !user.line_user_id && <a href="/api/line/login?link=1&next=/mypage" className="btn btn-line w-full">LINEアカウントで連携する（かんたん）</a>}
             <form action={linkLineAction} className="flex gap-2">
               <input name="line_user_id" className="input" defaultValue={user.line_user_id ?? ""} placeholder="LINE連携コード" />
               <button className="btn btn-line whitespace-nowrap">{user.line_user_id ? "更新" : "連携する"}</button>
@@ -215,6 +221,22 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
             </tbody>
           </table>
         )}
+      </section>
+
+      <section className="card p-4">
+        <div className="flex flex-wrap items-center justify-between gap-2">
+          <h2 className="font-bold text-accent-2">🎰 ガチャ <span className="text-xs text-muted font-normal">ログインボーナスを貯めて回そう</span></h2>
+          <div className="text-sm">保有 <b className="text-accent-2 text-lg">{pts}</b> ポイント</div>
+        </div>
+        {sp.bonus === "1" && <p className="text-ok text-sm border border-ok/40 rounded p-2 mt-2">本日のログインボーナス +1 ポイント！</p>}
+        {sp.bonus === "0" && <p className="text-muted text-sm border border-accent/20 rounded p-2 mt-2">本日のボーナスは受け取り済みです。また明日！</p>}
+        {sp.gacha_error && <p className="text-danger text-sm border border-danger/40 rounded p-2 mt-2">{sp.gacha_error}</p>}
+        {sp.gacha && (sp.won === "1" ? <p className="text-ok text-sm border border-ok/40 rounded p-2 mt-2 font-bold">🎉 当たり！「{sp.gacha}」。お店から景品についてご連絡します。</p> : <p className="text-muted text-sm border border-accent/20 rounded p-2 mt-2">残念、はずれ…。また挑戦！</p>)}
+        <div className="flex flex-wrap gap-2 mt-3">
+          <form action={loginBonusAction}><button className="btn btn-outline" disabled={claimed}>{claimed ? "✓ 本日のボーナス受取済み" : "本日のログインボーナスを受け取る（+1）"}</button></form>
+          <form action={gachaAction}><button className="btn" disabled={pts < GACHA_COST}>ガチャを回す（{GACHA_COST}ポイント）</button></form>
+        </div>
+        {gachaLog.length > 0 && <ul className="text-xs text-muted mt-2 flex flex-wrap gap-x-4">{gachaLog.map((g) => <li key={g.id}>{g.won ? "🎉" : "・"}{g.prize_name}（{formatDateTime(g.created_at)}）</li>)}</ul>}
       </section>
 
       <section className="card p-4" id="certs">

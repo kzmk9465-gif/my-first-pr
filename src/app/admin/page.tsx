@@ -5,6 +5,8 @@ import { getCurrentUser, listMembers } from "@/lib/auth";
 import { endedWithWinners, finalizeEnded, getUserById, listListings, reviewListings } from "@/lib/auctions";
 import { getOrder } from "@/lib/sellers";
 import { pendingSecondaryCertificates } from "@/lib/certificates";
+import { pendingVarieties } from "@/lib/zukan";
+import { openReports } from "@/lib/reports";
 import { ORDER_STATUS_LABELS } from "@/lib/config";
 import { formatDateTime, yen } from "@/lib/format";
 import { cancelListingAction, publishListingAction, rejectListingAction, toggleCommentsAction } from "./actions";
@@ -21,6 +23,8 @@ export default async function AdminPage() {
   const pendingCount = listMembers("pending").length;
   const review = reviewListings();
   const pendingCerts = pendingSecondaryCertificates().length;
+  const pendingVar = pendingVarieties().length;
+  const reports = openReports().length;
   const ended = endedWithWinners(50);
 
   return (
@@ -31,6 +35,10 @@ export default async function AdminPage() {
           <Link href="/admin/members" className="btn btn-outline">会員管理{pendingCount > 0 && <span className="badge badge-hot ml-1">{pendingCount}</span>}</Link>
           <Link href="/admin/sellers" className="btn btn-outline">出品者管理</Link>
           <Link href="/admin/news" className="btn btn-outline">瓦版・告知</Link>
+          <Link href="/admin/zukan" className="btn btn-outline">図鑑{pendingVar > 0 && <span className="badge badge-hot ml-1">{pendingVar}</span>}</Link>
+          <Link href="/admin/contests" className="btn btn-outline">品評会</Link>
+          <Link href="/admin/gacha" className="btn btn-outline">ガチャ</Link>
+          <Link href="/admin/reports" className="btn btn-outline">奉行所{reports > 0 && <span className="badge badge-hot ml-1">{reports}</span>}</Link>
           <Link href="/admin/certificates" className="btn btn-outline">証明書{pendingCerts > 0 && <span className="badge badge-hot ml-1">{pendingCerts}</span>}</Link>
           <Link href="/admin/listings/new" className="btn">＋ 新規出品</Link>
         </div>

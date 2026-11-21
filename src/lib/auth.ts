@@ -3,6 +3,7 @@ import { createHash, randomBytes, randomInt } from "node:crypto";
 import { getDb, nowIso } from "./db.ts";
 import { siteConfig } from "./config.ts";
 import { mailProvider, sendMail } from "./mail.ts";
+import { pushLine } from "./notify.ts";
 
 export type { User } from "./members.ts";
 import type { User } from "./members.ts";
@@ -42,6 +43,9 @@ export async function requestOtp(emailRaw: string): Promise<{ debugCode?: string
     `【${siteConfig.auctionName}】ログイン認証コード`,
     `認証コード: ${code}\n\n${OTP_MINUTES}分以内に入力してください。\nこのメールに覚えがない場合は破棄してください。`,
   );
+  // LINE連携済みなら LINE にも届ける（メールを開く手間を省く）
+  const linked = db.prepare("SELECT line_user_id FROM users WHERE email = ? AND line_user_id IS NOT NULL").get(email) as { line_user_id: string } | undefined;
+  if (linked) await pushLine(linked.line_user_id, `【${siteConfig.auctionName}】ログイン認証コード: ${code}（${OTP_MINUTES}分有効）`).catch(() => {});
   const showDebug = mailProvider() === "console" && process.env.NODE_ENV !== "production";
   return showDebug ? { debugCode: code } : {};
 }
@@ -75,14 +79,15 @@ export async function verifyOtp(emailRaw: string, code: string): Promise<{ ok: t
        status = CASE WHEN excluded.role = 'admin' AND users.status <> 'blocked' THEN 'approved' ELSE users.status END`,
   ).run(email, role, status, status === "approved" ? nowIso() : null);
   const user = db.prepare("SELECT id FROM users WHERE email = ?").get(email) as { id: number };
+  await createSession(user.id);
+  return { ok: true };
+}
 
+/** セッションを発行して Cookie に載せる（OTP と LINE ログインで共用） */
+export async function createSession(userId: number): Promise<void> {
   const token = randomBytes(32).toString("hex");
   const expires = new Date(Date.now() + SESSION_DAYS * 86_400_000);
-  db.prepare("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)").run(
-    token,
-    user.id,
-    expires.toISOString(),
-  );
+  getDb().prepare("INSERT INTO sessions (token, user_id, expires_at) VALUES (?, ?, ?)").run(token, userId, expires.toISOString());
   const jar = await cookies();
   jar.set(SESSION_COOKIE, token, {
     httpOnly: true,
@@ -91,7 +96,10 @@ export async function verifyOtp(emailRaw: string, code: string): Promise<{ ok: t
     expires,
     path: "/",
   });
-  return { ok: true };
+}
+
+export function findUserByLineId(lineUserId: string): User | null {
+  return (getDb().prepare("SELECT * FROM users WHERE line_user_id = ?").get(lineUserId) as User | undefined) ?? null;
 }
 
 export async function getCurrentUser(): Promise<User | null> {

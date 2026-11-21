@@ -39,6 +39,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
             </Link>
             <div className="flex items-center gap-3 text-sm">
               <Link href="/auctions" className="hover:text-accent-2">会場</Link>
+              <Link href="/zukan" className="hover:text-accent-2 hidden sm:inline">図鑑</Link>
+              <Link href="/contests" className="hover:text-accent-2 hidden sm:inline">品評会</Link>
               <Link href="/guide" className="hover:text-accent-2 hidden sm:inline">説明</Link>
               {user ? (
                 <>
@@ -74,6 +76,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="mx-auto max-w-5xl px-4 py-6 flex flex-wrap gap-x-4 gap-y-2 items-center justify-between">
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               <Link href="/guide" className="hover:text-accent-2">オークション説明</Link>
+              <Link href="/zukan" className="hover:text-accent-2">メダカ図鑑</Link>
+              <Link href="/contests" className="hover:text-accent-2">品評会</Link>
               <Link href="/legal/tokushoho" className="hover:text-accent-2">特定商取引法に基づく表記</Link>
               <Link href="/legal/terms" className="hover:text-accent-2">利用規約</Link>
               <Link href="/legal/privacy" className="hover:text-accent-2">プライバシーポリシー</Link>

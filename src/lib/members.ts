@@ -10,6 +10,7 @@ export type User = {
   shop_name: string | null;
   instagram: string | null;
   approved_at: string | null;
+  prefecture: string | null;
   line_user_id: string | null;
   shipping_name: string | null;
   shipping_postal: string | null;

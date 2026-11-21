@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
 import { siteConfig } from "@/lib/config";
 import { requestCodeAction, verifyCodeAction } from "./actions";
+import { lineLoginEnabled } from "@/lib/line-login";
 
 export const metadata: Metadata = { title: "ログイン" };
 export const dynamic = "force-dynamic";
@@ -41,6 +42,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <p className="text-sm text-muted">登録メールアドレスを入力してください。認証コードを送信します。未登録の方も同じ手順で会員登録できます。</p>
           <input name="email" type="email" placeholder="例: yamada@example.com" required autoFocus className="input" defaultValue={sp.email ?? ""} />
           <button className="btn w-full">認証コードを送信</button>
+          {lineLoginEnabled() && <a href={`/api/line/login?next=${encodeURIComponent(next)}`} className="btn btn-line w-full">LINEでログイン（連携済みの方）</a>}
           <p className="text-xs text-muted">ログインすることで<a href="/legal/terms" className="underline">利用規約</a>と<a href="/legal/privacy" className="underline">プライバシーポリシー</a>に同意したものとみなします。</p>
         </form>
       )}

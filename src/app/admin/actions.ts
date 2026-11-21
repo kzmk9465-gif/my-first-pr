@@ -176,3 +176,67 @@ export async function toggleCommentsAction(formData: FormData): Promise<void> {
   revalidatePath("/admin");
   redirect("/admin");
 }
+
+/* ---------- 第5段階 ---------- */
+
+export async function varietyStatusAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const { setVarietyStatus } = await import("@/lib/zukan");
+  const status = String(formData.get("status"));
+  if (status === "approved" || status === "rejected") setVarietyStatus(Number(formData.get("id")), status);
+  revalidatePath("/zukan");
+  revalidatePath("/admin/zukan");
+  redirect("/admin/zukan");
+}
+
+export async function createContestAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const { createContest } = await import("@/lib/contests");
+  const title = str(formData, "title", 100);
+  if (!title) redirect(`/admin/contests?error=${encodeURIComponent("タイトルは必須です。")}`);
+  createContest(title, str(formData, "description", 2000));
+  revalidatePath("/contests");
+  redirect("/admin/contests?saved=1");
+}
+
+export async function contestStatusAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const { setContestStatus } = await import("@/lib/contests");
+  const status = String(formData.get("status"));
+  if (status === "entry" || status === "voting" || status === "closed") setContestStatus(Number(formData.get("id")), status);
+  revalidatePath("/contests");
+  redirect("/admin/contests");
+}
+
+export async function addPrizeAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const { addPrize } = await import("@/lib/gacha");
+  const name = str(formData, "name", 60);
+  if (!name) redirect(`/admin/gacha?error=${encodeURIComponent("景品名は必須です。")}`);
+  const stock = str(formData, "stock") ? Number(str(formData, "stock")) : null;
+  addPrize(name, Number(str(formData, "weight")) || 1, stock);
+  redirect("/admin/gacha?saved=1");
+}
+
+export async function prizeActiveAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const { setPrizeActive } = await import("@/lib/gacha");
+  setPrizeActive(Number(formData.get("id")), formData.get("active") === "1");
+  redirect("/admin/gacha");
+}
+
+export async function fulfillPrizeAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const { markFulfilled } = await import("@/lib/gacha");
+  markFulfilled(Number(formData.get("id")));
+  redirect("/admin/gacha");
+}
+
+export async function handleReportAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const { handleReport } = await import("@/lib/reports");
+  handleReport(Number(formData.get("id")));
+  if (formData.get("cancel") === "1") cancelListing(Number(formData.get("listing_id")));
+  revalidatePath("/admin/reports");
+  redirect("/admin/reports");
+}

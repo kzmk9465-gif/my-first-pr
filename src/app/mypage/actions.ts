@@ -47,3 +47,22 @@ export async function logoutAction(): Promise<void> {
   await logout();
   redirect("/auctions");
 }
+
+export async function loginBonusAction(): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login?next=/mypage");
+  const { claimLoginBonus } = await import("@/lib/gacha");
+  const got = claimLoginBonus(user.id);
+  revalidatePath("/mypage");
+  redirect(got ? "/mypage?bonus=1" : "/mypage?bonus=0");
+}
+
+export async function gachaAction(): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login?next=/mypage");
+  const { spin } = await import("@/lib/gacha");
+  const r = await spin(user.id);
+  revalidatePath("/mypage");
+  if (!r.ok) redirect(`/mypage?gacha_error=${encodeURIComponent(r.error)}`);
+  redirect(`/mypage?gacha=${encodeURIComponent(r.prize)}&won=${r.won ? 1 : 0}`);
+}

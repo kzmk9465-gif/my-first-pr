@@ -10,14 +10,14 @@ import { liveState } from "@/lib/auctions";
 import { canBid, getCurrentUser, needsRegistration } from "@/lib/auth";
 import { CERTIFICATE_LABELS, siteConfig } from "@/lib/config";
 import { formatDateTime, yen } from "@/lib/format";
-import { confirmBidAction, favoriteAction, followAction, issueCertificateAction, unlockAction } from "./actions";
+import { confirmBidAction, favoriteAction, followAction, issueCertificateAction, reportAction, unlockAction } from "./actions";
 import { userRank, rankByLevel } from "@/lib/ranks";
 import { certificateForListing } from "@/lib/certificates";
 import { getOrder } from "@/lib/sellers";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; bid?: string; outcome?: string; price?: string; extended?: string; bought?: string; unlocked?: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; bid?: string; outcome?: string; price?: string; extended?: string; bought?: string; unlocked?: string; reported?: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const l = getListing(Number((await params).id));
@@ -67,7 +67,7 @@ export default async function ListingPage({ params, searchParams }: Props) {
       <div className="space-y-4">
         <nav className="text-xs text-muted"><Link href="/auctions" className="hover:text-accent-2">オークション一覧</Link> › ID:{l.id}</nav>
         <Gallery images={images} title={l.title} silhouette={!reveal} />
-        {l.mystery && !reveal && <p className="text-xs text-muted text-center">📦 千両箱：中身は落札してからのお楽しみ。画像はシルエットで表示しています。</p>}
+        {l.mystery && !reveal ? <p className="text-xs text-muted text-center">📦 千両箱：中身は落札してからのお楽しみ。画像はシルエットで表示しています。</p> : null}
         {l.status !== "review" && <Danmaku listingId={l.id} canPost={!!user && allowed} enabled={!!l.comments_enabled} />}
         {ytId && (
           <div className="card overflow-hidden aspect-video">
@@ -92,6 +92,18 @@ export default async function ListingPage({ params, searchParams }: Props) {
           </dl>
           {l.description && <p className="whitespace-pre-wrap pt-2 border-t border-accent/10">{l.description}</p>}
         </div>
+        {user && l.status !== "review" && (
+          <details className="text-xs text-muted">
+            <summary className="cursor-pointer">⚖ 奉行所（管理者）へ通報する</summary>
+            {sp.reported ? <p className="text-ok mt-2">通報を受け付けました。奉行所が確認します。</p> : (
+              <form action={reportAction} className="mt-2 space-y-2">
+                <input type="hidden" name="listing_id" value={l.id} />
+                <textarea name="reason" rows={2} required className="input" placeholder="不審な点（画像の無断使用、説明と違う、価格操作の疑いなど）" />
+                <button className="btn btn-outline !py-1">通報する</button>
+              </form>
+            )}
+          </details>
+        )}
       </div>
 
       <div className="space-y-4">
