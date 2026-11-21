@@ -1,16 +1,21 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0b1020;
-  --surface: #141b33;
-  --surface-2: #1c2547;
-  --foreground: #f1ecdc;
-  --muted: #a7a89b;
-  --accent: #d4a84b;
-  --accent-2: #e9c877;
+  /* 藍墨（深い紺）を基調に、金を主役にした和モダンの配色 */
+  --background: #080b16;
+  --bg-2: #0d1224;
+  --surface: #141b31;
+  --surface-2: #1b2444;
+  --foreground: #f3efe1;
+  --muted: #9aa0b2;
+  --accent: #c9a24a;        /* 落ち着いた金 */
+  --accent-2: #ecd08a;      /* 明るい金（見出し・強調） */
+  --accent-deep: #8c6d2a;   /* 金の陰影 */
+  --seal: #c0453b;          /* 朱（印章の赤。差し色） */
   --danger: #f08a8a;
   --ok: #8fd6a0;
   --line: #06c755;
+  --hair: rgba(201, 162, 74, 0.22);  /* 金の細線 */
 }
 
 @theme inline {
@@ -21,6 +26,8 @@
   --color-muted: var(--muted);
   --color-accent: var(--accent);
   --color-accent-2: var(--accent-2);
+  --color-accent-deep: var(--accent-deep);
+  --color-seal: var(--seal);
   --color-danger: var(--danger);
   --color-ok: var(--ok);
   --color-line: var(--line);
@@ -29,40 +36,88 @@
 html { color-scheme: dark; }
 
 body {
-  background: var(--background);
+  min-height: 100vh;
   color: var(--foreground);
-  font-family: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", "Shippori Mincho", serif;
+  /* 奥行きのある背景：上に金のほのかな光、全体に藍墨のグラデーション */
+  background:
+    radial-gradient(1200px 520px at 50% -140px, rgba(201,162,74,0.10), transparent 60%),
+    radial-gradient(900px 600px at 85% 8%, rgba(60,86,170,0.10), transparent 55%),
+    linear-gradient(180deg, var(--bg-2) 0%, var(--background) 42%, var(--background) 100%);
+  background-attachment: fixed;
+}
+/* 和紙のような極薄のテクスチャ（麻の葉を思わせる細かな斜線） */
+body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,0.015) 0 1px, transparent 1px 22px);
+  opacity: 0.5;
 }
 
+::selection { background: rgba(236,208,138,0.3); color: #fff; }
+
+/* スクロールバー */
+* { scrollbar-width: thin; scrollbar-color: var(--accent-deep) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: var(--accent-deep); border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
+
+/* ---- 見出し・装飾 ---- */
+.text-accent-2 { letter-spacing: 0.01em; }
+/* 金の細い区切り線 */
+.hairline { height: 1px; background: linear-gradient(90deg, transparent, var(--hair) 20%, var(--hair) 80%, transparent); }
+
+/* ---- カード ---- */
 .card {
-  background: var(--surface);
-  border: 1px solid rgba(212, 168, 75, 0.18);
-  border-radius: 0.75rem;
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.015), transparent 40%),
+    linear-gradient(180deg, var(--surface), #111831);
+  border: 1px solid var(--hair);
+  border-radius: 0.85rem;
+  box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 10px 30px -18px rgba(0,0,0,0.8);
 }
 
+/* ---- ボタン ---- */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
-  padding: .55rem 1rem; border-radius: .5rem; font-weight: 700;
-  background: var(--accent); color: #1a1405; transition: filter .15s;
+  padding: .58rem 1.1rem; border-radius: .55rem; font-weight: 800; letter-spacing: .02em;
+  color: #1a1405;
+  background: linear-gradient(180deg, var(--accent-2), var(--accent) 55%, #b8923e);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.4) inset, 0 8px 18px -10px rgba(201,162,74,0.7);
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
 }
-.btn:hover { filter: brightness(1.08); }
-.btn:disabled { opacity: .5; cursor: not-allowed; }
-.btn-outline { background: transparent; color: var(--accent-2); border: 1px solid var(--accent); }
-.btn-line { background: var(--line); color: #fff; }
+.btn:hover { filter: brightness(1.05); transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset, 0 12px 22px -10px rgba(201,162,74,0.85); }
+.btn:active { transform: translateY(0); }
+.btn:disabled { opacity: .45; cursor: not-allowed; filter: grayscale(.3); transform: none; box-shadow: none; }
+.btn-outline {
+  background: transparent; color: var(--accent-2); border: 1px solid var(--accent);
+  box-shadow: none;
+}
+.btn-outline:hover { background: rgba(201,162,74,0.1); }
+.btn-line { background: var(--line); color: #fff; box-shadow: 0 8px 18px -10px rgba(6,199,85,0.6); }
+.btn-line:hover { filter: brightness(1.05); }
 
+/* ---- 入力 ---- */
 .input {
-  width: 100%; padding: .55rem .75rem; border-radius: .5rem;
-  background: #0e1428; border: 1px solid rgba(255,255,255,.12); color: var(--foreground);
+  width: 100%; padding: .58rem .8rem; border-radius: .55rem;
+  background: #0b1122; border: 1px solid rgba(255,255,255,.1); color: var(--foreground);
+  transition: border-color .12s, box-shadow .12s;
 }
-.input:focus { outline: 2px solid var(--accent); outline-offset: 0; }
+.input::placeholder { color: #697089; }
+.input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(201,162,74,0.22); }
 
+/* ---- バッジ ---- */
 .badge {
-  display: inline-block; padding: .1rem .5rem; border-radius: 999px; font-size: .72rem;
-  border: 1px solid rgba(255,255,255,.18); color: var(--muted);
+  display: inline-block; padding: .12rem .55rem; border-radius: 999px; font-size: .72rem; line-height: 1.5;
+  border: 1px solid rgba(255,255,255,.16); color: var(--muted); background: rgba(255,255,255,0.02);
 }
-.badge-ok { color: var(--ok); border-color: rgba(143,214,160,.5); }
-.badge-hot { color: #ffb067; border-color: rgba(255,176,103,.5); }
-.badge-star { color: var(--accent-2); border-color: rgba(233,200,119,.5); }
+.badge-ok { color: var(--ok); border-color: rgba(143,214,160,.5); background: rgba(143,214,160,0.08); }
+.badge-hot { color: #ffb067; border-color: rgba(255,176,103,.5); background: rgba(255,176,103,0.08); }
+.badge-star { color: #241a05; border-color: transparent; background: linear-gradient(180deg, var(--accent-2), var(--accent)); font-weight: 700; }
 
-.tab { padding: .5rem 1rem; border-bottom: 2px solid transparent; color: var(--muted); }
-.tab-active { color: var(--accent-2); border-bottom-color: var(--accent); }
+/* ---- タブ ---- */
+.tab { padding: .55rem 1.1rem; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 700; transition: color .12s; }
+.tab:hover { color: var(--foreground); }
+.tab-active { color: var(--accent-2); border-bottom-color: var(--accent); text-shadow: 0 0 18px rgba(236,208,138,0.4); }

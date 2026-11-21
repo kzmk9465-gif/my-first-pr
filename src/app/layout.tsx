@@ -9,6 +9,7 @@ import { ticker } from "@/lib/auctions";
 import Ticker from "@/components/Ticker";
 import Kawaraban from "@/components/Kawaraban";
 import Broadcast from "@/components/Broadcast";
+import Seal from "@/components/Seal";
 
 export const metadata: Metadata = {
   title: { default: `${siteConfig.auctionName} | ${siteConfig.name}`, template: `%s | ${siteConfig.name}` },
@@ -31,11 +32,14 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   return (
     <html lang="ja">
       <body className="min-h-screen flex flex-col">
-        <header className="sticky top-0 z-40 backdrop-blur bg-background/80 border-b border-accent/20">
-          <nav className="mx-auto max-w-5xl px-4 h-14 flex items-center justify-between gap-4">
-            <Link href="/auctions" className="font-black tracking-widest text-accent-2">
-              {siteConfig.auctionName}
-              <span className="ml-2 text-[10px] text-muted tracking-[0.3em] hidden sm:inline">{siteConfig.auctionNameEn}</span>
+        <header className="sticky top-0 z-40 backdrop-blur-md bg-background/85 border-b border-accent/25 shadow-[0_8px_24px_-20px_rgba(0,0,0,0.9)]">
+          <nav className="mx-auto max-w-5xl px-4 h-16 flex items-center justify-between gap-4">
+            <Link href="/auctions" className="flex items-center gap-2.5 group">
+              <Seal size={34} className="drop-shadow-[0_0_10px_rgba(236,208,138,0.35)] transition-transform group-hover:scale-105" />
+              <span className="leading-none">
+                <span className="block font-black tracking-[0.22em] text-accent-2 text-lg">{siteConfig.auctionName}</span>
+                <span className="block text-[9px] text-muted tracking-[0.34em] mt-0.5 hidden sm:block">{siteConfig.auctionNameEn}</span>
+              </span>
             </Link>
             <div className="flex items-center gap-3 text-sm">
               <Link href="/auctions" className="hover:text-accent-2">会場</Link>
@@ -72,8 +76,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <main className="flex-1 mx-auto w-full max-w-5xl px-4 py-6 pb-12">{children}</main>
         <Kawaraban news={news} results={results} />
         <Ticker initial={tick} />
-        <footer className="border-t border-accent/20 text-xs text-muted">
-          <div className="mx-auto max-w-5xl px-4 py-6 flex flex-wrap gap-x-4 gap-y-2 items-center justify-between">
+        <footer className="border-t border-accent/20 text-xs text-muted mt-4">
+          <div className="hairline" />
+          <div className="mx-auto max-w-5xl px-4 py-7 flex flex-wrap gap-x-5 gap-y-3 items-center justify-between">
+            <div className="flex items-center gap-2 mr-2 opacity-80"><Seal size={22} /><span className="tracking-[0.2em] text-accent-2 font-bold">{siteConfig.auctionName}</span></div>
             <div className="flex flex-wrap gap-x-4 gap-y-1">
               <Link href="/guide" className="hover:text-accent-2">オークション説明</Link>
               <Link href="/zukan" className="hover:text-accent-2">メダカ図鑑</Link>
