@@ -34,6 +34,15 @@ export async function markReadAction(): Promise<void> {
   revalidatePath("/mypage");
 }
 
+export async function completeOrderAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login?next=/mypage");
+  const { completeOrderByBuyer } = await import("@/lib/sellers");
+  completeOrderByBuyer(user.id, Number(formData.get("listing_id")));
+  revalidatePath("/mypage");
+  redirect("/mypage?received=1");
+}
+
 export async function logoutAction(): Promise<void> {
   await logout();
   redirect("/auctions");

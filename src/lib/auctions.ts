@@ -2,6 +2,7 @@ import { getDb, nowIso, transaction } from "./db.ts";
 import { siteConfig } from "./config.ts";
 import { notifyUser } from "./notify.ts";
 import { yen } from "./format.ts";
+import { createOrder } from "./sellers.ts";
 
 export type Seller = { id: number; name: string; slug: string; description: string | null };
 
@@ -22,8 +23,16 @@ export type Listing = {
   bid_increment: number;
   starts_at: string;
   ends_at: string;
-  status: "scheduled" | "open" | "ended" | "cancelled";
+  status: "scheduled" | "open" | "ended" | "cancelled" | "review";
   winner_id: number | null;
+  buyout_price: number | null;
+  subtitle: string | null;
+  images: string | null;
+  video_url: string | null;
+  shipping_method: "normal" | "cool";
+  shipping_fee: number;
+  fee_rate: number;
+  created_by: number | null;
   featured: number;
   hot: number;
   extended_count: number;
@@ -64,6 +73,7 @@ export async function finalizeEnded(): Promise<number> {
         .get(id) as { user_id: number } | undefined;
       const top = lead ? { user_id: lead.user_id, amount: l.current_price } : undefined;
       tx.prepare("UPDATE listings SET status = 'ended', winner_id = ? WHERE id = ?").run(top?.user_id ?? null, id);
+      if (top) createOrder(l as unknown as Listing, top.user_id);
       return { listing: l, top };
     });
     if (result?.top) {
@@ -73,7 +83,7 @@ export async function finalizeEnded(): Promise<number> {
       await notifyUser(
         winner,
         "won",
-        `「${result.listing.title}」を ${yen(result.top.amount)} で落札しました。マイページから発送先をご確認ください。お支払いは${siteConfig.payment.method}（落札後${siteConfig.payment.dueDays}日以内）です。`,
+        `「${result.listing.title}」を ${yen(result.top.amount)} で落札しました。マイページの「取引のいま」からお支払い手続きへお進みください（落札後${siteConfig.payment.dueDays}日以内）。`,
         id,
       );
     }
@@ -394,15 +404,26 @@ export type ListingInput = {
   featured: boolean;
   hot: boolean;
   sudden_death?: boolean;
+  buyout_price?: number | null;
+  subtitle?: string;
+  images?: string[];
+  video_url?: string;
+  shipping_method?: "normal" | "cool";
+  shipping_fee?: number;
+  fee_rate?: number;
+  created_by?: number;
+  /** true なら管理者の確認待ち（公開されない） */
+  needs_review?: boolean;
 };
 
 export async function createListing(input: ListingInput): Promise<number> {
-  const status = input.starts_at > nowIso() ? "scheduled" : "open";
+  const status = input.needs_review ? "review" : input.starts_at > nowIso() ? "scheduled" : "open";
   const r = getDb()
     .prepare(
       `INSERT INTO listings (seller_id, title, variety, breeder, certificate, quantity, description, image_url,
-         start_price, current_price, bid_increment, starts_at, ends_at, status, featured, hot, sudden_death)
-       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+         start_price, current_price, bid_increment, starts_at, ends_at, status, featured, hot, sudden_death,
+         buyout_price, subtitle, images, video_url, shipping_method, shipping_fee, fee_rate, created_by)
+       VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
     )
     .run(
       input.seller_id,
@@ -422,9 +443,24 @@ export async function createListing(input: ListingInput): Promise<number> {
       input.featured ? 1 : 0,
       input.hot ? 1 : 0,
       (input.sudden_death ?? siteConfig.suddenDeathDefault) ? 1 : 0,
+      input.buyout_price && input.buyout_price > input.start_price ? input.buyout_price : null,
+      input.subtitle || null,
+      input.images && input.images.length ? JSON.stringify(input.images) : null,
+      input.video_url || null,
+      input.shipping_method ?? "normal",
+      input.shipping_fee ?? 0,
+      input.fee_rate ?? 0,
+      input.created_by ?? null,
     );
   const id = Number(r.lastInsertRowid);
+  if (status === "review") return id;
 
+  await notifyFollowersOfNewListing(id, input.seller_id, input.title);
+  return id;
+}
+
+async function notifyFollowersOfNewListing(id: number, sellerId: number, title: string): Promise<void> {
+  const input = { seller_id: sellerId, title };
   // フォロワーへ新規出品通知
   const followers = getDb()
     .prepare("SELECT u.id, u.email, u.line_user_id FROM follows f JOIN users u ON u.id = f.user_id WHERE f.seller_id = ?")
@@ -433,7 +469,71 @@ export async function createListing(input: ListingInput): Promise<number> {
   for (const f of followers) {
     await notifyUser(f, "new_listing", `フォロー中の ${seller.name} が「${input.title}」を出品しました。`, id);
   }
-  return id;
+}
+
+/** 管理者が確認待ちの出品を公開する */
+export async function publishListing(id: number): Promise<boolean> {
+  const db = getDb();
+  const l = db.prepare("SELECT * FROM listings WHERE id = ? AND status = 'review'").get(id) as Listing | undefined;
+  if (!l) return false;
+  const now = nowIso();
+  // 終了日時が過ぎていたら、今から3日後に設定し直す
+  const ends = l.ends_at > now ? l.ends_at : new Date(Date.now() + 3 * 86_400_000).toISOString();
+  const starts = l.starts_at > now ? l.starts_at : now;
+  db.prepare("UPDATE listings SET status = ?, starts_at = ?, ends_at = ? WHERE id = ?").run(starts > now ? "scheduled" : "open", starts, ends, id);
+  await notifyFollowersOfNewListing(id, l.seller_id, l.title);
+  if (l.created_by) {
+    const u = db.prepare("SELECT id, email, line_user_id FROM users WHERE id = ?").get(l.created_by) as { id: number; email: string; line_user_id: string | null };
+    await notifyUser(u, "system", `出品「${l.title}」が公開されました。`, id);
+  }
+  return true;
+}
+
+export function reviewListings(): Listing[] {
+  return getDb().prepare(`${LISTING_SELECT} WHERE l.status = 'review' ORDER BY l.created_at ASC`).all() as Listing[];
+}
+
+export function listingsForSeller(sellerId: number): Listing[] {
+  return getDb()
+    .prepare(`${LISTING_SELECT} WHERE l.seller_id = ? ORDER BY CASE l.status WHEN 'review' THEN 0 WHEN 'open' THEN 1 WHEN 'scheduled' THEN 2 ELSE 3 END, l.ends_at DESC`)
+    .all(sellerId) as Listing[];
+}
+
+export function listingImages(l: Pick<Listing, "images" | "image_url">): string[] {
+  const arr: string[] = [];
+  if (l.images) {
+    try { arr.push(...(JSON.parse(l.images) as string[])); } catch { /* ignore */ }
+  }
+  if (l.image_url && !arr.includes(l.image_url)) arr.unshift(l.image_url);
+  return arr;
+}
+
+/** 即決。現在価格が即決価格未満の開催中オークションを、即決価格で落札して終了する。 */
+export async function buyNow(listingId: number, userId: number): Promise<{ ok: true; price: number } | { ok: false; error: string }> {
+  let title = "";
+  const r = transaction((tx): { ok: true; price: number } | { ok: false; error: string } => {
+    const l = tx.prepare("SELECT * FROM listings WHERE id = ?").get(listingId) as Listing | undefined;
+    if (!l) return { ok: false, error: "出品が見つかりません。" };
+    const now = nowIso();
+    if (l.status === "scheduled" && l.starts_at <= now) l.status = "open";
+    if (l.status !== "open" || l.ends_at <= now) return { ok: false, error: "このオークションは即決できません。" };
+    if (!l.buyout_price) return { ok: false, error: "この出品に即決価格はありません。" };
+    if (l.current_price >= l.buyout_price) return { ok: false, error: "現在価格が即決価格に達しているため即決できません。" };
+    title = l.title;
+    tx.prepare("INSERT INTO bids (listing_id, user_id, amount, is_auto) VALUES (?, ?, ?, 0)").run(listingId, userId, l.buyout_price);
+    tx.prepare(
+      `INSERT INTO max_bids (listing_id, user_id, max_amount) VALUES (?, ?, ?)
+       ON CONFLICT(listing_id, user_id) DO UPDATE SET max_amount = excluded.max_amount, updated_at = ?`,
+    ).run(listingId, userId, l.buyout_price, now);
+    tx.prepare("UPDATE listings SET status = 'ended', winner_id = ?, current_price = ?, ends_at = ? WHERE id = ?").run(userId, l.buyout_price, now, listingId);
+    createOrder({ ...l, current_price: l.buyout_price }, userId);
+    return { ok: true, price: l.buyout_price };
+  });
+  if (r.ok) {
+    const u = getDb().prepare("SELECT id, email, line_user_id FROM users WHERE id = ?").get(userId) as { id: number; email: string; line_user_id: string | null };
+    await notifyUser(u, "won", `「${title}」を即決価格 ${yen(r.price)} で落札しました。マイページの「取引のいま」からお支払い手続きへお進みください。`, listingId);
+  }
+  return r;
 }
 
 export function cancelListing(id: number): void {

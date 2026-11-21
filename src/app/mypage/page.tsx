@@ -7,12 +7,15 @@ import ListingCard from "@/components/ListingCard";
 import Countdown from "@/components/Countdown";
 import { siteConfig } from "@/lib/config";
 import { formatDateTime, yen } from "@/lib/format";
-import { linkLineAction, logoutAction, markReadAction, updateProfileAction } from "./actions";
+import { completeOrderAction, linkLineAction, logoutAction, markReadAction, updateProfileAction } from "./actions";
+import { ordersForBuyer } from "@/lib/sellers";
+import { ORDER_STATUS_LABELS } from "@/lib/config";
+import { getSellerForUser } from "@/lib/sellers";
 
 export const metadata: Metadata = { title: "マイページ" };
 export const dynamic = "force-dynamic";
 
-export default async function MyPage({ searchParams }: { searchParams: Promise<{ saved?: string }> }) {
+export default async function MyPage({ searchParams }: { searchParams: Promise<{ saved?: string; received?: string }> }) {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/mypage");
   const sp = await searchParams;
@@ -23,6 +26,15 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
   const notes = myNotifications(user.id);
   const lost = myLostBids(user.id);
   const favs = myFavorites(user.id);
+  const orders = ordersForBuyer(user.id);
+  const sellerAcc = getSellerForUser(user.id);
+  const STEPS: { key: string; label: string }[] = [
+    { key: "awaiting_payment", label: "お手続き・お支払い" },
+    { key: "paid", label: "入金の確認" },
+    { key: "shipped", label: "発送" },
+    { key: "completed", label: "お受け取り" },
+  ];
+  const stepIndex = (s: string) => (s === "cancelled" ? -1 : STEPS.findIndex((x) => x.key === s));
   const STATUS = { pending: ["承認待ち", "badge-hot"], approved: ["承認済み", "badge-ok"], blocked: ["停止中", ""] } as const;
   const unread = notes.filter((n) => !n.read).length;
 
@@ -43,6 +55,7 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
         <p className="text-sm border border-accent/30 rounded p-2">会員登録の承認待ちです。承認されるとお知らせが届き、入札できるようになります。</p>
       )}
       {sp.saved && <p className="text-ok text-sm border border-ok/40 rounded p-2">保存しました。</p>}
+      {sp.received && <p className="text-ok text-sm border border-ok/40 rounded p-2">お受け取りありがとうございました。</p>}
 
       <section className="grid gap-4 md:grid-cols-2">
         <div className="card p-4 space-y-3">
@@ -102,11 +115,56 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
         )}
       </section>
 
+      {sellerAcc && (
+        <p className="text-sm border border-accent/30 rounded p-3 flex flex-wrap items-center justify-between gap-2">
+          <span>出品者アカウント「{sellerAcc.name}」が有効です。</span>
+          <Link href="/sell/dashboard" className="btn !py-1">出品者ダッシュボードへ</Link>
+        </p>
+      )}
+
+      <section className="card p-4" id="orders">
+        <h2 className="font-bold text-accent-2 mb-2">わたしの取引のいま</h2>
+        {orders.length === 0 ? <p className="text-sm text-muted">落札するとここに手続きの進み具合が表示されます。</p> : (
+          <div className="space-y-3">
+            {orders.map((o) => {
+              const idx = stepIndex(o.status);
+              return (
+                <div key={o.listing_id} className="border border-accent/10 rounded p-3 text-sm space-y-2">
+                  <div className="flex flex-wrap justify-between gap-2">
+                    <div className="font-bold"><Link href={`/auctions/${o.listing_id}`} className="hover:text-accent-2">{o.title}</Link><div className="text-xs text-muted font-normal">出品者 {o.seller_name} ・ {formatDateTime(o.created_at)} 落札</div></div>
+                    <span className={`badge ${o.status === "cancelled" ? "" : o.status === "completed" ? "badge-ok" : "badge-star"}`}>{ORDER_STATUS_LABELS[o.status]}</span>
+                  </div>
+                  <ol className="grid grid-cols-4 gap-1 text-[11px] text-center">
+                    {STEPS.map((s, n) => (
+                      <li key={s.key} className={`rounded py-1 border ${n < idx ? "border-ok/40 text-ok" : n === idx ? "border-accent text-accent-2 font-bold" : "border-accent/10 text-muted"}`}>{n < idx ? "✓ " : ""}{s.label}</li>
+                    ))}
+                  </ol>
+                  <div className="text-xs">
+                    落札 {yen(o.price)} ＋ 送料 {yen(o.shipping_fee)}（{o.shipping_method === "cool" ? "クール便" : "常温便"}） ＝ <b>お支払い合計 {yen(o.price + o.shipping_fee)}</b>
+                  </div>
+                  {o.status === "awaiting_payment" && (
+                    <div className="text-xs border border-accent/20 rounded p-2 whitespace-pre-wrap">
+                      <b>お支払い方法：</b>{o.seller_payment_info || `${siteConfig.payment.method}。${siteConfig.payment.bankInfo}`}
+                      {"\n"}落札後{siteConfig.payment.dueDays}日以内にお支払いください。発送先：{user.shipping_address ? `〒${user.shipping_postal} ${user.shipping_address}` : <span className="text-danger">未登録（上の発送先情報を保存してください）</span>}
+                    </div>
+                  )}
+                  {o.status === "shipped" && (
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-xs">
+                      <span>発送済み：{o.carrier} {o.tracking_no}</span>
+                      <form action={completeOrderAction}><input type="hidden" name="listing_id" value={o.listing_id} /><button className="btn !py-1 text-xs">受け取りました</button></form>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </section>
+
       <section className="card p-4">
         <h2 className="font-bold text-accent-2 mb-2">🏆 落札品</h2>
         {wins.length === 0 ? <p className="text-sm text-muted">まだ落札品はありません。</p> : (
           <div className="text-sm space-y-2">
-            <p className="text-xs text-muted">お支払い：{siteConfig.payment.method}（落札後{siteConfig.payment.dueDays}日以内）。{siteConfig.payment.bankInfo}</p>
             <table className="w-full">
               <tbody className="divide-y divide-accent/10">
                 {wins.map((l) => (

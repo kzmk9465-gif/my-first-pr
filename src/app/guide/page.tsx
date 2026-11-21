@@ -27,7 +27,8 @@ export default function GuidePage() {
       </section>
       <section>
         <h2 className="font-bold text-accent-2 mb-1">3. 落札とお支払い</h2>
-        <p>終了時刻の時点で最高額の方が落札者となり、メールとお知らせでご連絡します。お支払いは{siteConfig.payment.method}で、落札後{siteConfig.payment.dueDays}日以内にお願いします。{siteConfig.payment.bankInfo}</p>
+        <p>終了時刻の時点で最高額の方が落札者となり、メールとお知らせでご連絡します。即決価格つきの出品は、即決ボタンからその場で落札できます。</p>
+        <p className="mt-1">落札後はマイページの「わたしの取引のいま」で、お支払い→入金の確認→発送→お受け取りの進み具合を確認できます。お支払い合計は落札額＋送料（常温便またはクール便）で、お支払い方法は出品者ごとの案内に従ってください（原則{siteConfig.payment.method}、落札後{siteConfig.payment.dueDays}日以内）。発送されると配送業者と追跡番号をお知らせします。</p>
       </section>
       <section>
         <h2 className="font-bold text-accent-2 mb-1">4. 発送・生体について</h2>
@@ -42,8 +43,12 @@ export default function GuidePage() {
         </ul>
       </section>
       <section>
-        <h2 className="font-bold text-accent-2 mb-1">6. フォロー機能</h2>
-        <p>出品者ページの☆を押すと、その出品者が新しく出品したときにお知らせします。</p>
+        <h2 className="font-bold text-accent-2 mb-1">6. フォロー・お気に入り</h2>
+        <p>出品者ページの☆を押すと、その出品者が新しく出品したときにお知らせします。出品カードの♡でお気に入りに登録でき、マイページでまとめて見られます。</p>
+      </section>
+      <section>
+        <h2 className="font-bold text-accent-2 mb-1">7. 出品したい方へ</h2>
+        <p>承認された会員は、お店の出品者登録を受けるとご自身で出品できます。手数料プランは{siteConfig.feePlans.map((p) => `${p.rate}%`).join("／")}から選べ、出品はお店の確認後に公開されます。詳しくは<a href="/sell" className="underline">出品者メニュー</a>をご覧ください。</p>
       </section>
     </article>
   );

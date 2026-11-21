@@ -3,6 +3,7 @@ import Link from "next/link";
 import "./globals.css";
 import { siteConfig } from "@/lib/config";
 import { getCurrentUser } from "@/lib/auth";
+import { getSellerForUser } from "@/lib/sellers";
 
 export const metadata: Metadata = {
   title: { default: `${siteConfig.auctionName} | ${siteConfig.name}`, template: `%s | ${siteConfig.name}` },
@@ -16,6 +17,7 @@ export const viewport: Viewport = { themeColor: "#0b1020" };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
+  const isSeller = user ? !!getSellerForUser(user.id) : false;
   return (
     <html lang="ja">
       <body className="min-h-screen flex flex-col">
@@ -30,6 +32,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Link href="/guide" className="hover:text-accent-2 hidden sm:inline">説明</Link>
               {user ? (
                 <>
+                  {isSeller && <Link href="/sell/dashboard" className="hover:text-accent-2">出品</Link>}
                   {user.role === "admin" && <Link href="/admin" className="hover:text-accent-2">管理</Link>}
                   <Link href="/mypage" className="btn btn-outline !py-1 !px-3">
                     マイページ{user.status === "pending" && user.role !== "admin" && <span className="badge badge-hot ml-1">承認待ち</span>}

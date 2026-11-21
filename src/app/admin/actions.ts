@@ -3,7 +3,9 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { getCurrentUser } from "@/lib/auth";
-import { cancelListing, createListing, createSeller } from "@/lib/auctions";
+import { cancelListing, createListing, createSeller, publishListing } from "@/lib/auctions";
+import { feePlanRate, randomPin, updateSellerAccount } from "@/lib/sellers";
+import { getDb } from "@/lib/db";
 import { fromLocalInputValue } from "@/lib/format";
 import { siteConfig } from "@/lib/config";
 
@@ -91,4 +93,44 @@ export async function setMemberStatusAction(formData: FormData): Promise<void> {
   }
   revalidatePath("/admin/members");
   redirect(`/admin/members?f=${f}`);
+}
+
+export async function publishListingAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+  await publishListing(id);
+  revalidatePath("/auctions");
+  revalidatePath("/admin");
+  redirect("/admin");
+}
+
+export async function rejectListingAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const id = Number(formData.get("id"));
+  getDb().prepare("UPDATE listings SET status = 'cancelled' WHERE id = ? AND status = 'review'").run(id);
+  revalidatePath("/admin");
+  redirect("/admin");
+}
+
+/** 出品者アカウント設定：会員との紐づけ・手数料プラン・PIN発行 */
+export async function sellerAccountAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const sellerId = Number(formData.get("seller_id"));
+  const email = str(formData, "user_email", 100).toLowerCase();
+  let userId: number | null = null;
+  if (email) {
+    const u = getDb().prepare("SELECT id FROM users WHERE email = ?").get(email) as { id: number } | undefined;
+    if (!u) redirect(`/admin/sellers?error=${encodeURIComponent("そのメールアドレスの会員が見つかりません。先に会員登録（ログイン）してもらってください。")}`);
+    userId = u.id;
+  }
+  const plan = str(formData, "fee_plan");
+  const feeRate = plan === "custom" ? Math.min(100, Math.max(0, Number(str(formData, "fee_rate")) || 0)) : feePlanRate(plan);
+  const wantPin = formData.get("issue_pin") === "on";
+  const pin = wantPin ? randomPin() : undefined;
+  updateSellerAccount(sellerId, { user_id: userId, fee_rate: feeRate, pin });
+  revalidatePath("/admin/sellers");
+  const p = new URLSearchParams({ saved: "1" });
+  if (pin) p.set("pin", pin);
+  p.set("seller", String(sellerId));
+  redirect(`/admin/sellers?${p.toString()}`);
 }

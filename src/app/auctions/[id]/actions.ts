@@ -59,3 +59,20 @@ export async function favoriteAction(formData: FormData): Promise<void> {
   revalidatePath("/mypage");
   redirect(back);
 }
+
+/** 即決の確定 */
+export async function buyNowAction(formData: FormData): Promise<void> {
+  const listingId = Number(formData.get("listing_id"));
+  const user = await getCurrentUser();
+  if (!user) redirect(`/login?next=/auctions/${listingId}`);
+  if (needsRegistration(user)) redirect(`/register?next=/auctions/${listingId}`);
+  if (!canBid(user)) redirect(`/auctions/${listingId}?error=${encodeURIComponent("会員承認後に即決できます。")}`);
+  if (formData.get("agree") !== "on") redirect(`/auctions/${listingId}/buyout?error=${encodeURIComponent("確認事項にチェックを入れてください。")}`);
+  const { buyNow } = await import("@/lib/auctions");
+  const r = await buyNow(listingId, user.id);
+  revalidatePath(`/auctions/${listingId}`);
+  revalidatePath("/auctions");
+  revalidatePath("/mypage");
+  if (!r.ok) redirect(`/auctions/${listingId}?error=${encodeURIComponent(r.error)}`);
+  redirect(`/auctions/${listingId}?bought=${r.price}`);
+}

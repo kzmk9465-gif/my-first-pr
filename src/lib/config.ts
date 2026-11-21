@@ -15,6 +15,14 @@ export const siteConfig = {
   suddenDeathDefault: process.env.SUDDEN_DEATH_DEFAULT !== "false",
   /** 会員承認制（false にすると登録だけで入札可能） */
   requireApproval: process.env.REQUIRE_APPROVAL !== "false",
+  /** 手数料プラン（名前:率%）。例 FEE_PLANS="self:10,support:30,full:50" */
+  feePlans: (process.env.FEE_PLANS ?? "self:10,support:30,full:50")
+    .split(",")
+    .map((s) => s.split(":"))
+    .filter((p) => p.length === 2)
+    .map(([key, rate]) => ({ key: key.trim(), rate: Number(rate) })),
+  /** 画像アップロードの保存先 */
+  uploadDir: process.env.UPLOAD_DIR ?? "",
   /** デフォルトの入札単位（円） */
   defaultBidIncrement: Number(process.env.DEFAULT_BID_INCREMENT ?? 100),
   /** 管理者として扱うメールアドレス（カンマ区切り） */
@@ -40,6 +48,20 @@ export const siteConfig = {
   line: {
     addFriendUrl: process.env.LINE_ADD_FRIEND_URL ?? "",
   },
+};
+
+export const FEE_PLAN_LABELS: Record<string, string> = {
+  self: "セルフプラン（出品・撮影・発送を自分で）",
+  support: "サポートプラン（撮影・説明文をお店が支援）",
+  full: "フルプラン（魚を預けて販売はお店に全部おまかせ）",
+};
+
+export const ORDER_STATUS_LABELS: Record<string, string> = {
+  awaiting_payment: "お支払い待ち",
+  paid: "入金確認済み",
+  shipped: "発送済み",
+  completed: "お受け取り完了",
+  cancelled: "取消",
 };
 
 export const CERTIFICATE_LABELS: Record<string, string> = {

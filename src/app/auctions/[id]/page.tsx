@@ -1,7 +1,9 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { bidStatus, extensionSeconds, finalizeEnded, getBids, getListing, isFavorite, isFollowing, minimumBid } from "@/lib/auctions";
+import { bidStatus, extensionSeconds, finalizeEnded, getBids, getListing, isFavorite, isFollowing, listingImages, minimumBid } from "@/lib/auctions";
+import { getSellerForUser } from "@/lib/sellers";
+import Gallery from "@/components/Gallery";
 import { canBid, getCurrentUser, needsRegistration } from "@/lib/auth";
 import { CERTIFICATE_LABELS, siteConfig } from "@/lib/config";
 import { formatDateTime, remaining, yen } from "@/lib/format";
@@ -10,7 +12,7 @@ import Countdown from "@/components/Countdown";
 
 export const dynamic = "force-dynamic";
 
-type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; bid?: string; outcome?: string; price?: string; extended?: string }> };
+type Props = { params: Promise<{ id: string }>; searchParams: Promise<{ error?: string; bid?: string; outcome?: string; price?: string; extended?: string; bought?: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const l = getListing(Number((await params).id));
@@ -24,6 +26,14 @@ export default async function ListingPage({ params, searchParams }: Props) {
   const l = getListing(id);
   if (!l) notFound();
   const user = await getCurrentUser();
+  if (l.status === "review") {
+    // 確認待ちは管理者と出品者本人だけ閲覧できる
+    const mine = user ? getSellerForUser(user.id)?.id === l.seller_id : false;
+    if (!user || (user.role !== "admin" && !mine)) notFound();
+  }
+  const images = listingImages(l);
+  const ytId = l.video_url?.match(/(?:v=|youtu\.be\/|shorts\/)([A-Za-z0-9_-]{6,})/)?.[1];
+  const canBuyout = !!l.buyout_price && l.status === "open" && l.current_price < l.buyout_price;
   const bids = getBids(id);
   const open = l.status === "open";
   const min = minimumBid(l);
@@ -42,14 +52,12 @@ export default async function ListingPage({ params, searchParams }: Props) {
     <div className="grid gap-6 lg:grid-cols-[1.2fr_1fr]">
       <div className="space-y-4">
         <nav className="text-xs text-muted"><Link href="/auctions" className="hover:text-accent-2">オークション一覧</Link> › ID:{l.id}</nav>
-        <div className="card overflow-hidden aspect-[4/3] bg-surface-2 flex items-center justify-center">
-          {l.image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={l.image_url} alt={l.title} className="h-full w-full object-contain" />
-          ) : (
-            <span className="text-muted">画像なし</span>
-          )}
-        </div>
+        <Gallery images={images} title={l.title} />
+        {ytId && (
+          <div className="card overflow-hidden aspect-video">
+            <iframe className="h-full w-full" src={`https://www.youtube-nocookie.com/embed/${ytId}?rel=0&playsinline=1&modestbranding=1`} title="出品動画" allow="encrypted-media; picture-in-picture" allowFullScreen loading="lazy" />
+          </div>
+        )}
         <div className="card p-4 space-y-2 text-sm">
           <h2 className="font-bold text-accent-2">出品情報</h2>
           <dl className="grid grid-cols-[6rem_1fr] gap-y-1">
@@ -60,6 +68,8 @@ export default async function ListingPage({ params, searchParams }: Props) {
             {l.quantity && (<><dt className="text-muted">数量</dt><dd>{l.quantity}</dd></>)}
             {l.certificate && (<><dt className="text-muted">証明</dt><dd><span className="badge badge-ok">{CERTIFICATE_LABELS[l.certificate]} ✓</span></dd></>)}
             <dt className="text-muted">開始価格</dt><dd>{yen(l.start_price)}</dd>
+            {l.buyout_price && (<><dt className="text-muted">即決価格</dt><dd>{yen(l.buyout_price)}</dd></>)}
+            <dt className="text-muted">送料</dt><dd>{yen(l.shipping_fee)}（{l.shipping_method === "cool" ? "クール便" : "常温便"}・落札者負担）</dd>
             <dt className="text-muted">入札単位</dt><dd>{yen(l.bid_increment)}</dd>
             <dt className="text-muted">開始</dt><dd>{formatDateTime(l.starts_at)}</dd>
             <dt className="text-muted">終了</dt><dd>{formatDateTime(l.ends_at)}{l.extended_count > 0 && <span className="text-muted text-xs ml-1">（{l.extended_count}回延長）</span>}</dd>
@@ -73,11 +83,13 @@ export default async function ListingPage({ params, searchParams }: Props) {
           <div className="flex flex-wrap gap-1 items-center">
             {l.featured ? <span className="badge badge-star">⭐注目</span> : null}
             {l.hot ? <span className="badge badge-hot">🔥</span> : null}
+            {l.status === "review" && <span className="badge badge-hot">確認待ち（非公開）</span>}
             {l.status === "scheduled" && <span className="badge">開催前</span>}
             {l.status === "ended" && <span className="badge">終了</span>}
             {l.status === "cancelled" && <span className="badge">取消</span>}
           </div>
           <h1 className="text-xl font-black leading-snug">{l.title}</h1>
+          {l.subtitle && <p className="text-sm text-muted -mt-2">{l.subtitle}</p>}
           <div>
             <div className="text-sm text-muted">{open ? "現在価格" : l.status === "ended" ? "落札価格" : "価格"}</div>
             <div className="text-3xl font-black text-accent-2">{yen(l.current_price)}</div>
@@ -91,6 +103,7 @@ export default async function ListingPage({ params, searchParams }: Props) {
           )}
 
           {sp.error && <p className="text-danger text-sm border border-danger/40 rounded p-2">{sp.error}</p>}
+          {sp.bought && <p className="text-ok text-sm border border-ok/40 rounded p-2">🏆 即決価格 {yen(Number(sp.bought))} で落札しました。<Link href="/mypage#orders" className="underline">マイページの「取引のいま」</Link>からお支払い手続きへお進みください。</p>}
           {sp.bid && sp.outcome === "lost" && (
             <p className="text-danger text-sm border border-danger/40 rounded p-2">
               上限 {yen(Number(sp.bid))} では他の方の上限に届きませんでした。価格は {yen(Number(sp.price))} になりました。もう一度、より高い上限で挑戦できます。
@@ -126,6 +139,9 @@ export default async function ListingPage({ params, searchParams }: Props) {
                 )}
                 <p className="text-xs text-muted">終了{Math.round(siteConfig.autoExtendWindowSeconds / 60)}分以内の入札で{extMin}分延長{l.sudden_death ? "（サドンデス：回数ごとに短縮）" : ""}。</p>
                 <button className="btn w-full text-lg">入札内容を確認する</button>
+                {canBuyout && (
+                  <Link href={`/auctions/${l.id}/buyout`} className="btn btn-outline w-full">即決 {yen(l.buyout_price!)} で落札する</Link>
+                )}
               </form>
             ) : (
               <Link href={`/login?next=${encodeURIComponent(back)}`} className="btn w-full">ログインして入札</Link>

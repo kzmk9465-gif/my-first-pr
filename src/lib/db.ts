@@ -104,6 +104,33 @@ CREATE TABLE IF NOT EXISTS lost_bids (
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
 );
 CREATE INDEX IF NOT EXISTS idx_lost_bids_user ON lost_bids(user_id, id DESC);
+CREATE TABLE IF NOT EXISTS orders (
+  listing_id INTEGER PRIMARY KEY REFERENCES listings(id) ON DELETE CASCADE,
+  buyer_id INTEGER NOT NULL REFERENCES users(id),
+  seller_id INTEGER NOT NULL REFERENCES sellers(id),
+  status TEXT NOT NULL DEFAULT 'awaiting_payment',
+  price INTEGER NOT NULL,
+  shipping_fee INTEGER NOT NULL DEFAULT 0,
+  shipping_method TEXT,
+  fee_rate INTEGER NOT NULL DEFAULT 0,
+  carrier TEXT,
+  tracking_no TEXT,
+  note TEXT,
+  paid_at TEXT,
+  shipped_at TEXT,
+  completed_at TEXT,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  updated_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_orders_buyer ON orders(buyer_id);
+CREATE INDEX IF NOT EXISTS idx_orders_seller ON orders(seller_id, status);
+CREATE TABLE IF NOT EXISTS listing_templates (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  seller_id INTEGER NOT NULL REFERENCES sellers(id) ON DELETE CASCADE,
+  name TEXT NOT NULL,
+  body TEXT NOT NULL,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
 CREATE TABLE IF NOT EXISTS favorites (
   user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
   listing_id INTEGER NOT NULL REFERENCES listings(id) ON DELETE CASCADE,
@@ -120,6 +147,21 @@ const COLUMN_MIGRATIONS: [table: string, column: string, ddl: string][] = [
   ["users", "approved_at", "TEXT"],
   ["listings", "sudden_death", "INTEGER NOT NULL DEFAULT 0"],
   ["bids", "is_auto", "INTEGER NOT NULL DEFAULT 0"],
+  // 第2段階：フロント出品・出品者ダッシュボード
+  ["sellers", "user_id", "INTEGER REFERENCES users(id)"],
+  ["sellers", "pin_hash", "TEXT"],
+  ["sellers", "fee_rate", "INTEGER NOT NULL DEFAULT 10"],
+  ["sellers", "shipping_normal", "INTEGER NOT NULL DEFAULT 1000"],
+  ["sellers", "shipping_cool", "INTEGER NOT NULL DEFAULT 1500"],
+  ["sellers", "payment_info", "TEXT"],
+  ["listings", "buyout_price", "INTEGER"],
+  ["listings", "subtitle", "TEXT"],
+  ["listings", "images", "TEXT"],
+  ["listings", "video_url", "TEXT"],
+  ["listings", "shipping_method", "TEXT NOT NULL DEFAULT 'normal'"],
+  ["listings", "shipping_fee", "INTEGER NOT NULL DEFAULT 0"],
+  ["listings", "fee_rate", "INTEGER NOT NULL DEFAULT 0"],
+  ["listings", "created_by", "INTEGER REFERENCES users(id)"],
 ];
 
 function migrate(db: DatabaseSync): void {
