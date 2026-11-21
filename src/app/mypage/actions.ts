@@ -1,0 +1,40 @@
+"use server";
+
+import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
+import { getCurrentUser, logout, setLineUserId, updateProfile } from "@/lib/auth";
+import { markNotificationsRead } from "@/lib/auctions";
+
+export async function updateProfileAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login?next=/mypage");
+  updateProfile(user.id, {
+    name: String(formData.get("name") ?? "").trim().slice(0, 40),
+    shipping_name: String(formData.get("shipping_name") ?? "").trim().slice(0, 60),
+    shipping_postal: String(formData.get("shipping_postal") ?? "").trim().slice(0, 10),
+    shipping_address: String(formData.get("shipping_address") ?? "").trim().slice(0, 200),
+    shipping_phone: String(formData.get("shipping_phone") ?? "").trim().slice(0, 20),
+  });
+  revalidatePath("/mypage");
+  redirect("/mypage?saved=1");
+}
+
+export async function linkLineAction(formData: FormData): Promise<void> {
+  const user = await getCurrentUser();
+  if (!user) redirect("/login?next=/mypage");
+  const id = String(formData.get("line_user_id") ?? "").trim();
+  setLineUserId(user.id, id || null);
+  revalidatePath("/mypage");
+  redirect("/mypage?saved=1");
+}
+
+export async function markReadAction(): Promise<void> {
+  const user = await getCurrentUser();
+  if (user) markNotificationsRead(user.id);
+  revalidatePath("/mypage");
+}
+
+export async function logoutAction(): Promise<void> {
+  await logout();
+  redirect("/auctions");
+}
