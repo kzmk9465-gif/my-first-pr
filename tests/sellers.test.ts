@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import sharp from "sharp";
 
 const dir = fs.mkdtempSync(path.join(os.tmpdir(), "banshu-sellers-"));
 process.env.DATABASE_PATH = path.join(dir, "test.sqlite");
@@ -119,14 +120,19 @@ test("PINと会員紐づけ", () => {
   assert.equal(verifySellerPin(getSellerById(sellerId)!, "87654321"), true);
 });
 
-test("画像アップロードは形式とマジックバイトを検証し、保存後に読み出せる", async () => {
-  const png = Buffer.concat([Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]), Buffer.alloc(32)]);
+test("画像アップロードは形式とマジックバイトを検証し、WebPに変換して保存後に読み出せる", async () => {
+  // 実際にデコード可能なPNGを用意（パイプラインがWebPへ変換する）
+  const png = await sharp({ create: { width: 8, height: 8, channels: 3, background: { r: 10, g: 20, b: 30 } } }).png().toBuffer();
   const ok = await saveImage(new File([png], "a.png", { type: "image/png" }));
   assert.equal(ok.ok, true);
   const name = (ok as { url: string }).url.split("/").pop()!;
-  assert.equal(readUpload(name)!.type, "image/png");
+  assert.match(name, /\.webp$/); // 保存は常にWebP
+  assert.equal(readUpload(name)!.type, "image/webp");
+
+  // マジックバイトが画像として読めない入力は保存前に弾く
   const bad = await saveImage(new File([Buffer.alloc(40)], "a.png", { type: "image/png" }));
   assert.equal(bad.ok, false);
+  // 対応外のMIMEタイプも弾く
   const badType = await saveImage(new File([png], "a.svg", { type: "image/svg+xml" }));
   assert.equal(badType.ok, false);
   assert.equal(readUpload("../etc/passwd"), null);

@@ -2,6 +2,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
 import { siteConfig } from "./config.ts";
+import { processUploadImage } from "./image-pipeline.ts";
 
 const MAX_BYTES = 8 * 1024 * 1024;
 const TYPES: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "image/webp": "webp", "image/gif": "gif" };
@@ -12,15 +13,28 @@ export function uploadDir(): string {
   return dir;
 }
 
-/** 画像ファイルを保存して公開URL（/api/uploads/<name>）を返す */
+/**
+ * 画像ファイルを安全化・最適化して保存し、公開URL（/api/uploads/<name>）を返す。
+ * EXIF/GPS を除去し WebP へ変換・リサイズするため、保存されるのは常に .webp。
+ */
 export async function saveImage(file: File): Promise<{ ok: true; url: string } | { ok: false; error: string }> {
   const ext = TYPES[file.type];
   if (!ext) return { ok: false, error: "画像は JPEG / PNG / WebP / GIF のみ対応です。" };
   if (file.size > MAX_BYTES) return { ok: false, error: "画像は1枚8MBまでです。" };
   const buf = Buffer.from(await file.arrayBuffer());
   if (!looksLikeImage(buf, ext)) return { ok: false, error: "画像ファイルとして読み取れませんでした。" };
-  const name = `${Date.now().toString(36)}-${randomBytes(6).toString("hex")}.${ext}`;
-  fs.writeFileSync(path.join(uploadDir(), name), buf);
+
+  // GPS位置情報・撮影日時・端末名を除去し、WebPへ最適化してから保存する
+  let out: Buffer;
+  try {
+    const processed = await processUploadImage(buf, { animated: ext === "gif" });
+    out = processed.buffer;
+  } catch {
+    return { ok: false, error: "画像を処理できませんでした。別の画像をお試しください。" };
+  }
+
+  const name = `${Date.now().toString(36)}-${randomBytes(6).toString("hex")}.webp`;
+  fs.writeFileSync(path.join(uploadDir(), name), out);
   return { ok: true, url: `/api/uploads/${name}` };
 }
 
