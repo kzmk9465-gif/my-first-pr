@@ -131,3 +131,31 @@ body::before {
 .tab { padding: .55rem 1.1rem; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 700; transition: color .12s; }
 .tab:hover { color: var(--foreground); }
 .tab-active { color: var(--accent-2); border-bottom-color: var(--accent); text-shadow: 0 0 18px rgba(125,249,255,0.4); }
+
+/* ---- 播州くじ（オリパ）演出 ---- */
+/* レアリティ配色トークン */
+.rank-S { --rk:#FFE08A; --rk2:#FF6FB0; --rk3:#7DF9FF; }
+.rank-A { --rk:#FFD36E; --rk2:#FFB347; --rk3:#FFE08A; }
+.rank-B { --rk:#7DF9FF; --rk2:#00F0FF; --rk3:#0284C7; }
+.rank-C { --rk:#94A3B8; --rk2:#64748B; --rk3:#475569; }
+
+@keyframes oripa-float { 0%,100%{ transform:translateY(-6px) } 50%{ transform:translateY(6px) } }
+@keyframes oripa-pulse { 0%,100%{ opacity:.55; transform:scale(1) } 50%{ opacity:1; transform:scale(1.06) } }
+@keyframes oripa-ripple { 0%{ transform:scale(.2); opacity:.9 } 100%{ transform:scale(2.6); opacity:0 } }
+@keyframes oripa-rise { 0%{ transform:translateY(40px) scale(.6); opacity:0 } 60%{ opacity:1 } 100%{ transform:translateY(-10px) scale(1.15); opacity:0 } }
+@keyframes oripa-hue { 0%{ filter:hue-rotate(0deg) } 100%{ filter:hue-rotate(360deg) } }
+@keyframes oripa-reveal { 0%{ transform:perspective(900px) rotateY(90deg) scale(.85); opacity:0 } 60%{ opacity:1 } 100%{ transform:perspective(900px) rotateY(0) scale(1); opacity:1 } }
+@keyframes oripa-splash { 0%{ transform:scale(0); opacity:.9 } 100%{ transform:scale(1.8); opacity:0 } }
+@keyframes oripa-sheen { 0%{ transform:translateX(-120%) } 100%{ transform:translateX(220%) } }
+@keyframes oripa-in { 0%{ opacity:0; transform:translateY(8px) } 100%{ opacity:1; transform:translateY(0) } }
+
+.anim-float { animation:oripa-float 3.2s ease-in-out infinite; }
+.anim-pulse { animation:oripa-pulse 2.2s ease-in-out infinite; }
+.anim-rise { animation:oripa-rise 1.5s ease-out forwards; }
+.anim-hue { animation:oripa-hue 2.4s linear infinite; }
+.anim-reveal { animation:oripa-reveal .7s cubic-bezier(.2,.8,.2,1) both; }
+.anim-in { animation:oripa-in .4s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-float,.anim-pulse,.anim-rise,.anim-hue,.anim-reveal,.anim-in { animation-duration:.01ms !important; animation-iteration-count:1 !important; }
+}

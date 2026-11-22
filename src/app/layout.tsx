@@ -10,6 +10,8 @@ import Ticker from "@/components/Ticker";
 import Kawaraban from "@/components/Kawaraban";
 import Broadcast from "@/components/Broadcast";
 import Seal from "@/components/Seal";
+import ChargePill from "@/components/ChargePill";
+import { points } from "@/lib/gacha";
 
 export const metadata: Metadata = {
   title: { default: `${siteConfig.auctionName} | ${siteConfig.name}`, template: `%s | ${siteConfig.name}` },
@@ -24,6 +26,7 @@ export const viewport: Viewport = { themeColor: "#080C14" };
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   const isSeller = user ? !!getSellerForUser(user.id) : false;
+  const balance = user ? points(user.id) : 0;
   const alerts = activeNews("alert", 3);
   const broadcast = activeNews("broadcast", 1)[0];
   const news = activeNews("news", 10).map((n) => ({ id: n.id, title: n.title, body: n.body, image_url: n.image_url, created_at: n.created_at }));
@@ -42,14 +45,16 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </span>
             </Link>
             <div className="flex items-center gap-3 text-sm">
-              <Link href="/auctions" className="hover:text-accent-2">会場</Link>
+              <Link href="/auctions" className="hover:text-accent-2">競市</Link>
+              <Link href="/oripa" className="hover:text-accent-2">播州くじ</Link>
               <Link href="/zukan" className="hover:text-accent-2 hidden sm:inline">図鑑</Link>
               <Link href="/contests" className="hover:text-accent-2 hidden sm:inline">品評会</Link>
               <Link href="/guide" className="hover:text-accent-2 hidden sm:inline">説明</Link>
               {user ? (
                 <>
-                  {isSeller && <Link href="/sell/dashboard" className="hover:text-accent-2">出品</Link>}
-                  {user.role === "admin" && <Link href="/admin" className="hover:text-accent-2">管理</Link>}
+                  <ChargePill balance={balance} />
+                  {isSeller && <Link href="/sell/dashboard" className="hover:text-accent-2 hidden sm:inline">出品</Link>}
+                  {user.role === "admin" && <Link href="/admin" className="hover:text-accent-2 hidden sm:inline">管理</Link>}
                   <Link href="/mypage" className="btn btn-outline !py-1 !px-3">
                     マイページ{user.status === "pending" && user.role !== "admin" && <span className="badge badge-hot ml-1">承認待ち</span>}
                   </Link>

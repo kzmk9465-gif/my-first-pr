@@ -264,6 +264,19 @@ CREATE TABLE IF NOT EXISTS favorites (
   created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
   PRIMARY KEY (user_id, listing_id)
 );
+CREATE TABLE IF NOT EXISTS oripa_draws (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  package_id TEXT NOT NULL,
+  rarity TEXT NOT NULL,
+  prize_name TEXT NOT NULL,
+  ref_price INTEGER NOT NULL DEFAULT 0,
+  redeem_pt INTEGER NOT NULL DEFAULT 0,
+  status TEXT NOT NULL DEFAULT 'won',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE INDEX IF NOT EXISTS idx_oripa_pkg ON oripa_draws(package_id);
+CREATE INDEX IF NOT EXISTS idx_oripa_user ON oripa_draws(user_id);
 `;
 
 /** 既存DBに後から追加した列（ALTER TABLE は IF NOT EXISTS が無いので手動で確認） */
