@@ -124,7 +124,7 @@ export default async function MyPage({ searchParams }: { searchParams: Promise<{
       <section>
         <h2 className="font-bold text-accent-2 mb-2">♡ お気に入り（{favs.length}）</h2>
         {favs.length === 0 ? <p className="text-sm text-muted card p-4">出品カードの♡からお気に入りに登録できます。</p> : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{favs.map((l) => <ListingCard key={l.id} l={l} fav back="/mypage" />)}</div>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">{favs.map((l) => <ListingCard key={l.id} l={l} fav back="/mypage" />)}</div>
         )}
       </section>
 

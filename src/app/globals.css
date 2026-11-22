@@ -75,10 +75,10 @@ body::before {
   position: relative;
   background:
     linear-gradient(180deg, rgba(255,255,255,0.015), transparent 40%),
-    linear-gradient(180deg, var(--surface), #111831);
-  border: 1px solid var(--hair);
+    linear-gradient(180deg, var(--surface), #0f1626);
+  border: 1px solid rgba(255,255,255,0.10);
   border-radius: 0.85rem;
-  box-shadow: 0 1px 0 rgba(255,255,255,0.03) inset, 0 10px 30px -18px rgba(0,0,0,0.8);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.04) inset;
 }
 
 /* ---- ボタン ---- */
@@ -87,10 +87,10 @@ body::before {
   padding: .58rem 1.1rem; border-radius: .55rem; font-weight: 800; letter-spacing: .02em;
   color: #042430;
   background: linear-gradient(180deg, var(--accent-2), var(--accent) 55%, #0284C7);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.4) inset, 0 8px 18px -10px rgba(0,240,255,0.7);
+  box-shadow: 0 0 15px rgba(0,240,255,0.3), 0 1px 0 rgba(255,255,255,0.45) inset;
   transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
 }
-.btn:hover { filter: brightness(1.05); transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset, 0 12px 22px -10px rgba(0,240,255,0.85); }
+.btn:hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: 0 0 22px rgba(0,240,255,0.5), 0 1px 0 rgba(255,255,255,0.5) inset; }
 .btn:active { transform: translateY(0); }
 .btn:disabled { opacity: .45; cursor: not-allowed; filter: grayscale(.3); transform: none; box-shadow: none; }
 .btn-outline {
@@ -115,7 +115,7 @@ body::before {
   display: inline-block; padding: .12rem .55rem; border-radius: 999px; font-size: .72rem; line-height: 1.5;
   border: 1px solid rgba(255,255,255,.16); color: var(--muted); background: rgba(255,255,255,0.02);
 }
-.badge-ok { color: var(--ok); border-color: rgba(96,165,250,.5); background: rgba(96,165,250,0.08); }
+.badge-ok { color: #7cb0ff; border-color: rgba(96,165,250,.22); background: rgba(96,165,250,0.10); }
 .badge-hot { color: #ff6f9c; border-color: rgba(255,56,117,.5); background: rgba(255,56,117,0.08); }
 .badge-star { color: #042430; border-color: transparent; background: linear-gradient(180deg, var(--accent-2), var(--accent)); font-weight: 700; }
 
@@ -123,7 +123,9 @@ body::before {
 .text-urgent { color: var(--urgent); }
 .badge-urgent { color: #fff; border-color: transparent; background: linear-gradient(180deg, #f0693f, var(--urgent)); font-weight: 700; }
 /* 価格の焦点：黄金比で見出しより大きく、ほのかに発光 */
-.price-focus { color: var(--accent-2); font-weight: 900; letter-spacing: .01em; text-shadow: 0 0 18px rgba(125,249,255,0.28); }
+.price-focus { color: var(--accent-2); font-weight: 800; letter-spacing: .01em; text-shadow: 0 0 18px rgba(125,249,255,0.3);
+  font-family: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", "Noto Sans Mono", monospace; font-variant-numeric: tabular-nums; }
+.tnum { font-family: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", "Noto Sans Mono", monospace; font-variant-numeric: tabular-nums; }
 
 /* ---- タブ ---- */
 .tab { padding: .55rem 1.1rem; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 700; transition: color .12s; }

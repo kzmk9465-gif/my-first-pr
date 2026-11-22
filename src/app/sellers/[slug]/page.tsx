@@ -41,13 +41,13 @@ export default async function SellerPage({ params }: Props) {
       <section>
         <h2 className="font-bold mb-3">開催中（{open.total}）</h2>
         {open.items.length === 0 ? <p className="text-sm text-muted">開催中の出品はありません。</p> : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{open.items.map((l) => <ListingCard key={l.id} l={l} />)}</div>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">{open.items.map((l) => <ListingCard key={l.id} l={l} />)}</div>
         )}
       </section>
       {ended.items.length > 0 && (
         <section>
           <h2 className="font-bold mb-3">終了分</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">{ended.items.map((l) => <ListingCard key={l.id} l={l} />)}</div>
+          <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">{ended.items.map((l) => <ListingCard key={l.id} l={l} />)}</div>
         </section>
       )}
     </div>
