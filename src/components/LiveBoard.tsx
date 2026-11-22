@@ -8,6 +8,8 @@ type Props = { listingId: number; initial: LiveState; open: boolean; myUserId: n
 
 function yen(n: number) { return `${n.toLocaleString("ja-JP")} 円`; }
 function fmt(iso: string) { return new Date(iso).toLocaleString("ja-JP", { timeZone: "Asia/Tokyo", month: "numeric", day: "numeric", hour: "2-digit", minute: "2-digit", second: "2-digit" }); }
+function maskName(name: string | null) { if (!name) return "***"; const head = Array.from(name).filter((c) => c !== " " && c !== "\u3000").slice(0, 2).join(""); return head + "***"; }
+function relTime(iso: string, now: number) { const d = now - new Date(iso).getTime(); if (d < 60_000) return "たった今"; if (d < 3_600_000) return `${Math.floor(d / 60_000)}分前`; return new Date(iso).toLocaleTimeString("ja-JP", { timeZone: "Asia/Tokyo", hour: "2-digit", minute: "2-digit" }); }
 
 /**
  * 入札画面のライブ表示。3秒ごとに状態を取り、価格・残り時間・履歴を更新し、
@@ -83,7 +85,7 @@ export default function LiveBoard({ listingId, initial, open, myUserId, highBidT
         <div>
           <div className="text-sm text-muted">{open ? "現在価格" : s.status === "ended" ? "落札価格" : "価格"}</div>
           <div className={`text-4xl price-focus transition-transform ${flash ? "scale-110" : ""}`}>{yen(s.current_price)}</div>
-          <div className="text-xs text-muted">入札 {s.bid_count} 件{s.leader_label && open ? ` ・ 現在トップ ${s.leader_label}` : ""}{s.heat && <span className="badge badge-hot ml-2">🔥 ヒートアップ中</span>}</div>
+          <div className="text-xs text-muted">入札 {s.bid_count} 件{s.leader_label && open ? ` ・ 現在トップ ${maskName(s.leader_label)}` : ""}{s.heat && <span className="badge badge-hot ml-2">🔥 ヒートアップ中</span>}</div>
         </div>
         <div className="text-[10px] text-right space-y-1">
           <button type="button" onClick={() => toggle("sound")} className={`badge ${sound ? "badge-star" : ""}`}>♪ 音 {sound ? "入" : "切"}</button>
@@ -94,7 +96,7 @@ export default function LiveBoard({ listingId, initial, open, myUserId, highBidT
 
       {open && (
         <div className={`mt-2 text-sm ${lastSpurt ? "text-urgent" : "text-ok"}`}>
-          <span className="font-mono tabular-nums text-xl font-bold">{hhmmss}</span>
+          <span className={`font-mono tabular-nums text-xl font-bold ${lastSpurt ? "inline-flex items-center px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30" : ""}`}>{hhmmss}</span>
           <span className="text-muted ml-2" suppressHydrationWarning>（終了 {mounted ? fmt(s.ends_at) : ""}{s.extended_count > 0 ? ` ・ ${s.extended_count}回延長` : ""}）</span>
           {lastSpurt && fx && (
             <div className="mt-1 rounded border border-urgent/60 bg-urgent/10 px-2 py-1 text-xs font-bold animate-pulse" style={{ color: "var(--urgent)" }}>
@@ -108,12 +110,12 @@ export default function LiveBoard({ listingId, initial, open, myUserId, highBidT
         <div className="mt-2 rounded border border-accent/40 p-2 text-xs">
           <div className="font-bold text-accent-2 mb-1">⚔ 一騎打ち発生中！</div>
           <div className="flex items-center gap-2">
-            <span className="w-20 truncate">{s.duel.a}</span>
+            <span className="w-20 truncate">{maskName(s.duel.a)}</span>
             <div className="flex-1 h-3 rounded overflow-hidden bg-surface-2 flex">
               <div className="bg-accent" style={{ width: `${(100 * s.duel.a_count) / (s.duel.a_count + s.duel.b_count)}%` }} />
               <div className="bg-danger flex-1" />
             </div>
-            <span className="w-20 truncate text-right">{s.duel.b}</span>
+            <span className="w-20 truncate text-right">{maskName(s.duel.b)}</span>
           </div>
         </div>
       )}
@@ -123,10 +125,14 @@ export default function LiveBoard({ listingId, initial, open, myUserId, highBidT
         {s.recent.length === 0 ? <p className="text-sm text-muted">まだ入札はありません。</p> : (
           <ol className="text-sm divide-y divide-accent/10">
             {s.recent.map((b, i) => (
-              <li key={b.id} className={`py-1 flex justify-between gap-2 ${i === 0 && flash ? "text-accent-2" : ""}`}>
-                <span className="truncate">{i === 0 && open ? "🏆 " : ""}{myUserId === b.user_id ? "あなた" : b.label}{b.is_auto ? <span className="text-xs text-muted"> (自動)</span> : null}</span>
-                <span className="text-muted text-xs whitespace-nowrap" suppressHydrationWarning>{mounted ? fmt(b.created_at) : ""}</span>
-                <span className="font-bold whitespace-nowrap">{yen(b.amount)}</span>
+              <li key={b.id} className={`py-1.5 flex items-center justify-between gap-2 ${i === 0 && flash ? "text-accent-2" : ""}`}>
+                <span className="truncate flex items-center gap-1.5">
+                  <span>{myUserId === b.user_id ? "あなた" : maskName(b.label)}</span>
+                  {i === 0 && open && <span className="inline-flex items-center px-1.5 py-0.5 rounded-full text-[10px] font-semibold bg-accent/15 text-accent border border-accent/30">最高額</span>}
+                  {b.is_auto ? <span className="text-[10px] text-muted">(自動)</span> : null}
+                </span>
+                <span className="text-muted text-xs whitespace-nowrap tnum" suppressHydrationWarning>{mounted ? relTime(b.created_at, now ?? Date.now()) : ""}</span>
+                <span className="font-mono tabular-nums font-bold whitespace-nowrap">{yen(b.amount)}</span>
               </li>
             ))}
           </ol>
