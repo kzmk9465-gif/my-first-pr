@@ -13,7 +13,7 @@ export default function Broadcast({ id, text }: { id: number; text: string }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-6" onClick={() => { setShow(false); try { localStorage.setItem(`banshu_bc_${id}`, "1"); } catch { /* ignore */ } }}>
       <div className="text-center">
         <div className="text-xs tracking-[0.5em] text-muted mb-3">運営より</div>
-        <div className="text-3xl sm:text-5xl font-black text-accent-2 leading-tight drop-shadow-[0_0_30px_rgba(212,168,75,.6)] whitespace-pre-wrap">{text}</div>
+        <div className="text-3xl sm:text-5xl font-black text-accent-2 leading-tight drop-shadow-[0_0_30px_rgba(0,240,255,.6)] whitespace-pre-wrap">{text}</div>
         <div className="mt-6 text-xs text-muted">タップで閉じる</div>
       </div>
     </div>

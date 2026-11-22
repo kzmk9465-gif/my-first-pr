@@ -64,13 +64,13 @@ export default function Gate({ name, target }: { name: string; target: string })
       style={{
         backgroundImage: warping
           ? undefined
-          : "radial-gradient(circle at 50% 40%, rgba(212,168,75,.18), transparent 55%), radial-gradient(circle at 20% 80%, rgba(80,120,255,.12), transparent 40%)",
+          : "radial-gradient(circle at 50% 40%, rgba(0,240,255,.18), transparent 55%), radial-gradient(circle at 20% 80%, rgba(80,120,255,.12), transparent 40%)",
       }}
     >
       <Stars />
       <div className={`text-center transition-all duration-500 ${warping ? "opacity-0 scale-150" : "opacity-100"}`}>
         <div className="text-xs tracking-[0.5em] text-muted">PREMIUM AUCTION</div>
-        <h1 className="mt-2 text-6xl sm:text-7xl font-black text-accent-2 tracking-widest drop-shadow-[0_0_30px_rgba(212,168,75,.45)]">
+        <h1 className="mt-2 text-6xl sm:text-7xl font-black text-accent-2 tracking-widest drop-shadow-[0_0_30px_rgba(0,240,255,.45)]">
           播州
         </h1>
         <div className="mt-1 text-sm text-muted">{name}</div>
@@ -92,7 +92,7 @@ export default function Gate({ name, target }: { name: string; target: string })
           <span className="absolute inset-3 rounded-full border border-accent/50" />
           <span
             className="absolute inset-6 rounded-full overflow-hidden bg-surface"
-            style={{ boxShadow: `0 0 ${20 + progress * 60}px rgba(212,168,75,${0.25 + progress * 0.6})` }}
+            style={{ boxShadow: `0 0 ${20 + progress * 60}px rgba(0,240,255,${0.25 + progress * 0.6})` }}
           >
             <span
               className="absolute left-0 right-0 bottom-0 bg-accent transition-[height] duration-75"
@@ -100,8 +100,8 @@ export default function Gate({ name, target }: { name: string; target: string })
             />
           </span>
           <span className="absolute inset-0 flex flex-col items-center justify-center font-black">
-            <span className={`text-2xl ${progress > 0.5 ? "text-[#1a1405]" : "text-accent-2"}`}>{warping ? "転送" : "入場"}</span>
-            <span className={`text-[10px] tracking-[0.4em] ${progress > 0.7 ? "text-[#1a1405]" : "text-muted"}`}>HOLD</span>
+            <span className={`text-2xl ${progress > 0.5 ? "text-[#042430]" : "text-accent-2"}`}>{warping ? "転送" : "入場"}</span>
+            <span className={`text-[10px] tracking-[0.4em] ${progress > 0.7 ? "text-[#042430]" : "text-muted"}`}>HOLD</span>
           </span>
         </button>
         <a href={target} className="text-xs text-muted underline underline-offset-4 hover:text-accent-2">

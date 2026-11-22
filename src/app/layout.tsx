@@ -19,7 +19,7 @@ export const metadata: Metadata = {
   icons: { icon: "/icon.svg", apple: "/icon.svg" },
 };
 
-export const viewport: Viewport = { themeColor: "#0D0F12" };
+export const viewport: Viewport = { themeColor: "#080C14" };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
@@ -35,7 +35,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
         <header className="sticky top-0 z-40 backdrop-blur-md bg-background/85 border-b border-accent/25 shadow-[0_8px_24px_-20px_rgba(0,0,0,0.9)]">
           <nav className="mx-auto max-w-5xl px-4 h-16 flex items-center justify-between gap-4">
             <Link href="/auctions" className="flex items-center gap-2.5 group">
-              <Seal size={34} className="drop-shadow-[0_0_10px_rgba(247,216,133,0.35)] transition-transform group-hover:scale-105" />
+              <Seal size={34} className="drop-shadow-[0_0_10px_rgba(125,249,255,0.35)] transition-transform group-hover:scale-105" />
               <span className="leading-none">
                 <span className="block font-black tracking-[0.22em] text-accent-2 text-lg">{siteConfig.auctionName}</span>
                 <span className="block text-[9px] text-muted tracking-[0.34em] mt-0.5 hidden sm:block">{siteConfig.auctionNameEn}</span>
@@ -61,7 +61,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           </nav>
         </header>
         {alerts.length > 0 && (
-          <div className="bg-accent text-[#1a1405] text-sm">
+          <div className="bg-accent text-[#042430] text-sm">
             {alerts.map((a) => (
               <div key={a.id} className="mx-auto max-w-5xl px-4 py-1.5 flex items-center gap-3">
                 <span className="font-black">📣</span>
