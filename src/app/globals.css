@@ -1,22 +1,22 @@
 @import "tailwindcss";
 
 :root {
-  /* 藍墨（深い紺）を基調に、金を主役にした和モダンの配色 */
-  --background: #080b16;
-  --bg-2: #0d1224;
-  --surface: #141b31;
-  --surface-2: #1b2444;
-  --foreground: #f3efe1;
-  --muted: #9aa0b2;
-  --accent: #cda049;        /* 落ち着いた金（暖色寄り＝価値が最も目立つ） */
-  --accent-2: #f0d591;      /* 明るい金（見出し・強調） */
-  --accent-deep: #8c6d2a;   /* 金の陰影 */
-  --seal: #c0453b;          /* 朱（印章の赤。差し色） */
-  --urgent: #e4572e;        /* 緊急の朱橙（残り時間・終了間際だけに少量） */
-  --danger: #f08a8a;
-  --ok: #8fd6a0;
-  --line: #06c755;
-  --hair: rgba(201, 162, 74, 0.22);  /* 金の細線 */
+  /* カラーパレット（Gemini提案を採用）: 漆黒×蒔絵ゴールド×朱橙×翡翠 */
+  --background: #0D0F12;     /* 最も暗いベース（漆器の黒） */
+  --bg-2: #161B22;           /* ヘッダー等の縦グラデ上部 */
+  --surface: #1C222D;        /* 生体ロットカードの主面（展示台） */
+  --surface-2: #12161D;      /* 詳細表・入札履歴・枠まわり */
+  --foreground: #EDE8DF;     /* 本文（和紙の生成り白） */
+  --muted: #9EAAAF;          /* 補助テキスト */
+  --accent: #D4AF37;         /* 純金箔の金（価格・主ボタン） */
+  --accent-2: #F7D885;       /* 明るい金（最高入札者・見出し・ホバー） */
+  --accent-deep: #8C6D1F;    /* 金の影・極細ボーダー */
+  --seal: #c0453b;           /* 朱（印章の赤） */
+  --urgent: #FF5E2B;         /* 終了間際の朱橙 */
+  --danger: #FF5555;         /* エラー */
+  --ok: #2EB872;             /* 翡翠の緑（認証・安心） */
+  --line: #06c755;           /* LINE */
+  --hair: rgba(212, 175, 55, 0.22);  /* 金の細線 */
 }
 
 @theme inline {
@@ -43,7 +43,7 @@ body {
   font-family: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", "Shippori Mincho", serif;
   /* 奥行きのある背景：上に金のほのかな光、全体に藍墨のグラデーション */
   background:
-    radial-gradient(1200px 520px at 50% -140px, rgba(201,162,74,0.10), transparent 60%),
+    radial-gradient(1200px 520px at 50% -140px, rgba(212,175,55,0.10), transparent 60%),
     radial-gradient(900px 600px at 85% 8%, rgba(60,86,170,0.10), transparent 55%),
     linear-gradient(180deg, var(--bg-2) 0%, var(--background) 42%, var(--background) 100%);
   background-attachment: fixed;
@@ -58,7 +58,7 @@ body::before {
   opacity: 0.5;
 }
 
-::selection { background: rgba(236,208,138,0.3); color: #fff; }
+::selection { background: rgba(247,216,133,0.3); color: #fff; }
 
 /* スクロールバー */
 * { scrollbar-width: thin; scrollbar-color: var(--accent-deep) transparent; }
@@ -86,18 +86,18 @@ body::before {
   display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
   padding: .58rem 1.1rem; border-radius: .55rem; font-weight: 800; letter-spacing: .02em;
   color: #1a1405;
-  background: linear-gradient(180deg, var(--accent-2), var(--accent) 55%, #b8923e);
-  box-shadow: 0 1px 0 rgba(255,255,255,0.4) inset, 0 8px 18px -10px rgba(201,162,74,0.7);
+  background: linear-gradient(180deg, var(--accent-2), var(--accent) 55%, #a8842a);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.4) inset, 0 8px 18px -10px rgba(212,175,55,0.7);
   transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
 }
-.btn:hover { filter: brightness(1.05); transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset, 0 12px 22px -10px rgba(201,162,74,0.85); }
+.btn:hover { filter: brightness(1.05); transform: translateY(-1px); box-shadow: 0 1px 0 rgba(255,255,255,0.5) inset, 0 12px 22px -10px rgba(212,175,55,0.85); }
 .btn:active { transform: translateY(0); }
 .btn:disabled { opacity: .45; cursor: not-allowed; filter: grayscale(.3); transform: none; box-shadow: none; }
 .btn-outline {
   background: transparent; color: var(--accent-2); border: 1px solid var(--accent);
   box-shadow: none;
 }
-.btn-outline:hover { background: rgba(201,162,74,0.1); }
+.btn-outline:hover { background: rgba(212,175,55,0.1); }
 .btn-line { background: var(--line); color: #fff; box-shadow: 0 8px 18px -10px rgba(6,199,85,0.6); }
 .btn-line:hover { filter: brightness(1.05); }
 
@@ -108,7 +108,7 @@ body::before {
   transition: border-color .12s, box-shadow .12s;
 }
 .input::placeholder { color: #697089; }
-.input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(201,162,74,0.22); }
+.input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(212,175,55,0.22); }
 
 /* ---- バッジ ---- */
 .badge {
@@ -123,9 +123,9 @@ body::before {
 .text-urgent { color: var(--urgent); }
 .badge-urgent { color: #fff; border-color: transparent; background: linear-gradient(180deg, #f0693f, var(--urgent)); font-weight: 700; }
 /* 価格の焦点：黄金比で見出しより大きく、ほのかに発光 */
-.price-focus { color: var(--accent-2); font-weight: 900; letter-spacing: .01em; text-shadow: 0 0 18px rgba(240,213,145,0.28); }
+.price-focus { color: var(--accent-2); font-weight: 900; letter-spacing: .01em; text-shadow: 0 0 18px rgba(247,216,133,0.28); }
 
 /* ---- タブ ---- */
 .tab { padding: .55rem 1.1rem; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 700; transition: color .12s; }
 .tab:hover { color: var(--foreground); }
-.tab-active { color: var(--accent-2); border-bottom-color: var(--accent); text-shadow: 0 0 18px rgba(236,208,138,0.4); }
+.tab-active { color: var(--accent-2); border-bottom-color: var(--accent); text-shadow: 0 0 18px rgba(247,216,133,0.4); }

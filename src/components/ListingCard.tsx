@@ -15,7 +15,7 @@ export default function ListingCard({ l, fav = false, back }: { l: Listing; fav?
             // eslint-disable-next-line @next/next/no-img-element
             <img src={l.image_url} alt={l.mystery ? "千両箱" : l.title} loading="lazy" className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105" style={l.mystery ? { filter: "brightness(0) contrast(1.2) blur(2px)", opacity: 0.85 } : undefined} />
           ) : (
-            <div className="h-full w-full flex items-center justify-center text-muted text-sm" style={{ background: "radial-gradient(circle at 50% 35%, rgba(201,162,74,0.08), transparent 60%)" }}>画像なし</div>
+            <div className="h-full w-full flex items-center justify-center text-muted text-sm" style={{ background: "radial-gradient(circle at 50% 35%, rgba(212,175,55,0.08), transparent 60%)" }}>画像なし</div>
           )}
           {/* 下側のグラデーションで文字を読みやすく */}
           <span className="pointer-events-none absolute inset-x-0 bottom-0 h-16 bg-gradient-to-t from-black/50 to-transparent" />

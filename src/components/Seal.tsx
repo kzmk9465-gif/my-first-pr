@@ -4,8 +4,8 @@ export default function Seal({ size = 34, className = "" }: { size?: number; cla
     <svg width={size} height={size} viewBox="0 0 48 48" className={className} aria-hidden role="img">
       <defs>
         <linearGradient id="seal-gold" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#ecd08a" />
-          <stop offset="1" stopColor="#b8923e" />
+          <stop offset="0" stopColor="#F7D885" />
+          <stop offset="1" stopColor="#a8842a" />
         </linearGradient>
       </defs>
       <circle cx="24" cy="24" r="22.2" fill="none" stroke="url(#seal-gold)" strokeWidth="1.4" />
