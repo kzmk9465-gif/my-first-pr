@@ -1,7 +1,7 @@
 import Link from "next/link";
 import type { Listing } from "@/lib/auctions";
 import { CERTIFICATE_LABELS } from "@/lib/config";
-import { formatDateTime, remaining, yen } from "@/lib/format";
+import { formatShort, remaining, yen } from "@/lib/format";
 import { favoriteAction } from "@/app/auctions/[id]/actions";
 
 export default function ListingCard({ l, fav = false, back }: { l: Listing; fav?: boolean; back?: string }) {
@@ -54,9 +54,15 @@ export default function ListingCard({ l, fav = false, back }: { l: Listing; fav?
           <div className="hairline mb-1.5" />
           <div className="text-[10px] sm:text-[11px] text-muted tracking-wide">{ended ? "落札価格" : "現在価格"}</div>
           <div className="text-xl sm:text-2xl price-focus leading-tight whitespace-nowrap">{yen(l.current_price)}</div>
-          <div className="flex items-center justify-between gap-1 mt-0.5 text-[10px] sm:text-[11px]">
-            <span className="text-muted tnum truncate">終了 {formatDateTime(l.ends_at)}</span>
-            <span className={`whitespace-nowrap tnum ${ended ? "text-muted" : soon ? "text-urgent font-bold" : "text-ok"}`}>{ended ? `入札 ${l.bid_count}件` : remaining(l.ends_at)}</span>
+          <div className="flex items-center justify-between gap-1.5 mt-1 text-[11px]">
+            <span className="text-muted tnum">{formatShort(l.ends_at)} 終了</span>
+            {ended ? (
+              <span className="text-muted tnum whitespace-nowrap">入札 {l.bid_count}件</span>
+            ) : soon ? (
+              <span className="inline-flex items-center px-1.5 py-0.5 rounded font-mono font-semibold whitespace-nowrap bg-rose-500/20 text-rose-400 border border-rose-500/30">{remaining(l.ends_at)}</span>
+            ) : (
+              <span className="text-muted tnum whitespace-nowrap">{remaining(l.ends_at)}</span>
+            )}
           </div>
         </div>
         <Link href={`/auctions/${l.id}`} className="btn w-full mt-1 !py-2 text-sm">

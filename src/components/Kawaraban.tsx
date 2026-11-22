@@ -11,7 +11,7 @@ export default function Kawaraban({ news, results }: { news: Item[]; results: Re
   const [open, setOpen] = useState(false);
   return (
     <>
-      <button type="button" onClick={() => setOpen(true)} className="fixed left-3 bottom-10 z-30 h-12 w-12 rounded-full border border-accent bg-surface text-accent-2 font-black shadow-lg" aria-label="瓦版を開く">瓦</button>
+      <button type="button" onClick={() => setOpen(true)} className="fixed right-4 bottom-12 z-50 h-12 w-12 rounded-full border border-accent bg-surface/90 backdrop-blur text-accent-2 font-black shadow-lg" aria-label="瓦版を開く">瓦</button>
       {open && (
         <div className="fixed inset-0 z-50 bg-black/70 flex items-end sm:items-center justify-center p-3" onClick={() => setOpen(false)}>
           <div className="card w-full max-w-lg max-h-[85vh] overflow-auto p-4 space-y-4" onClick={(e) => e.stopPropagation()} style={{ fontFamily: '"Hiragino Mincho ProN","Yu Mincho",serif' }}>
