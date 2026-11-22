@@ -32,7 +32,7 @@ export default async function MockPayPage({ params }: { params: Promise<{ token:
         <input type="hidden" name="token" value={token} />
         <button className="btn w-full text-lg">支払いを完了する（テスト）</button>
       </form>
-      <Link href="/mypage?pay_cancelled=1#orders" className="text-xs text-muted underline">支払わずに戻る</Link>
+      <Link href="/mypage?tab=won&pay_cancelled=1" className="text-xs text-muted underline">支払わずに戻る</Link>
       <div className="text-[10px] text-muted">{siteConfig.name}</div>
     </div>
   );

@@ -88,7 +88,7 @@ export async function finalizeEnded(): Promise<number> {
       await notifyUser(
         winner,
         "won",
-        `「${result.listing.title}」を ${yen(result.top.amount)} で落札しました。マイページの「取引のいま」からお支払い手続きへお進みください（落札後${siteConfig.payment.dueDays}日以内）。`,
+        `「${result.listing.title}」を ${yen(result.top.amount)} で落札しました。マイページの「落札分」からお支払い手続きへお進みください（落札後${siteConfig.payment.dueDays}日以内）。`,
         id,
       );
     }
@@ -680,7 +680,7 @@ export async function buyNow(listingId: number, userId: number): Promise<{ ok: t
   });
   if (r.ok) {
     const u = getDb().prepare("SELECT id, email, line_user_id FROM users WHERE id = ?").get(userId) as { id: number; email: string; line_user_id: string | null };
-    await notifyUser(u, "won", `「${title}」を即決価格 ${yen(r.price)} で落札しました。マイページの「取引のいま」からお支払い手続きへお進みください。`, listingId);
+    await notifyUser(u, "won", `「${title}」を即決価格 ${yen(r.price)} で落札しました。マイページの「落札分」からお支払い手続きへお進みください。`, listingId);
   }
   return r;
 }

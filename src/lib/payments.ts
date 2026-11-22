@@ -59,7 +59,7 @@ export async function startCheckout(listingId: number, buyerId: number): Promise
   body.set("mode", "payment");
   body.set("locale", "ja");
   body.set("success_url", `${siteConfig.baseUrl}/pay/return?token=${token}`);
-  body.set("cancel_url", `${siteConfig.baseUrl}/mypage?pay_cancelled=1#orders`);
+  body.set("cancel_url", `${siteConfig.baseUrl}/mypage?tab=won&pay_cancelled=1`);
   body.set("client_reference_id", token);
   body.set("metadata[token]", token);
   body.set("metadata[listing_id]", String(listingId));

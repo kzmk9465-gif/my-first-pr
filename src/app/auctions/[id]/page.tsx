@@ -158,7 +158,7 @@ export default async function ListingPage({ params, searchParams }: Props) {
 
             {sp.error && <p className="text-danger text-sm border border-danger/40 rounded p-2">{sp.error}</p>}
             {sp.unlocked && <p className="text-ok text-sm border border-ok/40 rounded p-2">🔓 合言葉を確認しました。入札できます。</p>}
-            {sp.bought && <p className="text-ok text-sm border border-ok/40 rounded p-2">🏆 即決価格 {yen(Number(sp.bought))} で落札しました。<Link href="/mypage#orders" className="underline">マイページの「取引のいま」</Link>からお支払い手続きへ。</p>}
+            {sp.bought && <p className="text-ok text-sm border border-ok/40 rounded p-2">🏆 即決価格 {yen(Number(sp.bought))} で落札しました。<Link href="/mypage?tab=won" className="underline">マイページの「落札分」</Link>からお支払い手続きへ。</p>}
             {sp.bid && sp.outcome === "lost" && <p className="text-danger text-sm border border-danger/40 rounded p-2">上限 {yen(Number(sp.bid))} では他の方の上限に届きませんでした。価格は {yen(Number(sp.price))} になりました。もう一度、より高い上限で挑戦できます。</p>}
             {sp.bid && sp.outcome === "raised" && <p className="text-ok text-sm border border-ok/40 rounded p-2">上限額を {yen(Number(sp.bid))} に引き上げました。あなたが引き続き最高入札者です。</p>}
             {sp.bid && sp.outcome === "leading" && <p className="text-ok text-sm border border-ok/40 rounded p-2">🏆 上限 {yen(Number(sp.bid))} で入札し、現在 {yen(Number(sp.price))} であなたが最高入札者です。{sp.extended && "終了間際のため延長されました。"}</p>}
@@ -197,7 +197,7 @@ export default async function ListingPage({ params, searchParams }: Props) {
                 {top ? <p>落札者：<b>{iWon ? "あなた" : "***"}</b></p> : <p className="text-muted">入札はありませんでした。</p>}
                 {iWon && (
                   <div className="mt-2 space-y-2">
-                    <p className="text-ok">おめでとうございます。<Link href="/mypage#orders" className="underline">マイページの「取引のいま」</Link>からお支払い手続きへ。</p>
+                    <p className="text-ok">おめでとうございます。<Link href="/mypage?tab=won" className="underline">マイページの「落札分」</Link>からお支払い手続きへ。</p>
                     {cert ? (
                       <Link href={`/certificates/${cert.code}`} className="btn btn-outline w-full">📜 落札販売証明書を見る（{cert.code}）</Link>
                     ) : order && ["paid", "shipped", "completed"].includes(order.status) ? (

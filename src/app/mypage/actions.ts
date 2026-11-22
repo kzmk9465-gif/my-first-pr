@@ -72,6 +72,6 @@ export async function startPaymentAction(formData: FormData): Promise<void> {
   if (!user) redirect("/login?next=/mypage");
   const { startCheckout } = await import("@/lib/payments");
   const r = await startCheckout(Number(formData.get("listing_id")), user.id);
-  if (!r.ok) redirect(`/mypage?pay_error=${encodeURIComponent(r.error)}#orders`);
+  if (!r.ok) redirect(`/mypage?tab=won&pay_error=${encodeURIComponent(r.error)}`);
   redirect(r.url);
 }

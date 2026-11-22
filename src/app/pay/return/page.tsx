@@ -11,7 +11,7 @@ export const dynamic = "force-dynamic";
 export default async function PayReturnPage({ searchParams }: { searchParams: Promise<{ token?: string }> }) {
   const { token } = await searchParams;
   const p = token ? getPayment(token) : null;
-  if (!p) redirect("/mypage#orders");
+  if (!p) redirect("/mypage?tab=won");
   const user = await getCurrentUser();
   if (!user || user.id !== p.buyer_id) redirect("/login?next=/mypage");
 
@@ -38,7 +38,7 @@ export default async function PayReturnPage({ searchParams }: { searchParams: Pr
         </>
       )}
       <Link href={`/auctions/${fresh.listing_id}`} className="btn btn-outline">出品ページ</Link>
-      <Link href="/mypage#orders" className="btn">マイページの取引へ</Link>
+      <Link href="/mypage?tab=won" className="btn">マイページの「落札分」へ</Link>
     </div>
   );
 }
