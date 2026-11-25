@@ -7,7 +7,7 @@ services:
     name: banshu-oku-demo
     runtime: docker
     repo: https://github.com/kzmk9465-gif/my-first-pr
-    branch: claude/practical-einstein-ae2d1x
+    branch: main
     dockerfilePath: ./Dockerfile
     plan: free
     region: singapore
