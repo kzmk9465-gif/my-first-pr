@@ -4,7 +4,7 @@ export function reportListing(listingId: number, userId: number, reason: string)
   const text = reason.trim().slice(0, 500);
   if (!text) return { ok: false, error: "通報の理由を入力してください。" };
   const dup = getDb().prepare("SELECT 1 FROM reports WHERE listing_id = ? AND user_id = ? AND handled = 0").get(listingId, userId);
-  if (dup) return { ok: false, error: "この出品は既に通報済みです。奉行所が確認中です。" };
+  if (dup) return { ok: false, error: "この出品は既に通報済みです。運営が確認中です。" };
   getDb().prepare("INSERT INTO reports (listing_id, user_id, reason) VALUES (?, ?, ?)").run(listingId, userId, text);
   return { ok: true };
 }

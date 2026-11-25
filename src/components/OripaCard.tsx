@@ -7,7 +7,7 @@ import { buyOripaAction, drawOripaAction, shipOripaAction } from "@/app/oripa/ac
 import type { DrawResult, Rarity } from "@/lib/oripa";
 import { FREE_SHIPPING_COUNT, SHIPPING_YEN, shippingFor } from "@/lib/oripa-shipping";
 
-export type PrizeLite = { id: number; rarity: Rarity; name: string; kind: string; ref_price: number; count_total: number; count_left: number };
+export type PrizeLite = { id: number; rarity: Rarity; name: string; kind: string; ref_price: number; ref_note?: string; count_total: number; count_left: number };
 export type PkgLite = {
   id: number; slug: string; name: string; subtitle: string; price_yen: number; total: number;
   hue1: string; hue2: string; prizes: PrizeLite[];
@@ -104,7 +104,7 @@ export default function OripaCard({ pkg, remaining: remaining0, sellable, logged
             {prizes.map((p) => (
               <tr key={p.id} className="border-t border-white/5">
                 <td className="py-1 pr-1 whitespace-nowrap font-bold" style={{ color: COLOR[p.rarity] }}>{LABEL[p.rarity]}</td>
-                <td className="py-1 pr-1">{p.name}<span className="text-muted"> ・参考 {yen(p.ref_price)}</span></td>
+                <td className="py-1 pr-1">{p.name}<span className="text-muted"> ・参考 {yen(p.ref_price)}{p.ref_note ? `（${p.ref_note}）` : ""}</span></td>
                 <td className="py-1 text-right tnum whitespace-nowrap text-muted">残 {p.count_left}/{p.count_total}本</td>
               </tr>
             ))}

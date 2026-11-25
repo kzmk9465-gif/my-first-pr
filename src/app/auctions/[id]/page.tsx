@@ -139,8 +139,8 @@ export default async function ListingPage({ params, searchParams }: Props) {
 
           {user && l.status !== "review" && (
             <details className="text-xs text-muted">
-              <summary className="cursor-pointer">⚖ 奉行所（管理者）へ通報する</summary>
-              {sp.reported ? <p className="text-ok mt-2">通報を受け付けました。奉行所が確認します。</p> : (
+              <summary className="cursor-pointer">⚖ 運営へ通報する</summary>
+              {sp.reported ? <p className="text-ok mt-2">通報を受け付けました。運営が確認します。</p> : (
                 <form action={reportAction} className="mt-2 space-y-2">
                   <input type="hidden" name="listing_id" value={l.id} />
                   <textarea name="reason" rows={2} required className="input" placeholder="不審な点（画像の無断使用、説明と違う、価格操作の疑いなど）" />

@@ -117,7 +117,7 @@ export async function issueCertificateAction(formData: FormData): Promise<void> 
   redirect(`/certificates/${r.cert.code}`);
 }
 
-/** 奉行所（管理者）へ通報 */
+/** 運営（管理者）へ通報 */
 export async function reportAction(formData: FormData): Promise<void> {
   const listingId = Number(formData.get("listing_id"));
   const user = await getCurrentUser();

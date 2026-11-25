@@ -100,7 +100,7 @@ export default function LiveBoard({ listingId, initial, open, myUserId, highBidT
           <span className="text-muted ml-2" suppressHydrationWarning>（終了 {mounted ? fmt(s.ends_at) : ""}{s.extended_count > 0 ? ` ・ ${s.extended_count}回延長` : ""}）</span>
           {lastSpurt && fx && (
             <div className="mt-1 rounded border border-urgent/60 bg-urgent/10 px-2 py-1 text-xs font-bold animate-pulse" style={{ color: "var(--urgent)" }}>
-              ⚔ 終了10分前。ここからが合戦。最後まで目を離すな！
+              ⚔ 終了10分前。ここからが終盤。最後まで目を離すな！
             </div>
           )}
         </div>

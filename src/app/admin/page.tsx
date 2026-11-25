@@ -34,12 +34,12 @@ export default async function AdminPage() {
         <div className="flex gap-2">
           <Link href="/admin/members" className="btn btn-outline">会員管理{pendingCount > 0 && <span className="badge badge-hot ml-1">{pendingCount}</span>}</Link>
           <Link href="/admin/sellers" className="btn btn-outline">出品者管理</Link>
-          <Link href="/admin/news" className="btn btn-outline">瓦版・告知</Link>
+          <Link href="/admin/news" className="btn btn-outline">お知らせ・告知</Link>
           <Link href="/admin/zukan" className="btn btn-outline">図鑑{pendingVar > 0 && <span className="badge badge-hot ml-1">{pendingVar}</span>}</Link>
           <Link href="/admin/contests" className="btn btn-outline">品評会</Link>
           <Link href="/admin/oripa" className="btn btn-outline">播州くじ</Link>
           <Link href="/admin/gacha" className="btn btn-outline">ガチャ</Link>
-          <Link href="/admin/reports" className="btn btn-outline">奉行所{reports > 0 && <span className="badge badge-hot ml-1">{reports}</span>}</Link>
+          <Link href="/admin/reports" className="btn btn-outline">通報{reports > 0 && <span className="badge badge-hot ml-1">{reports}</span>}</Link>
           <Link href="/admin/certificates" className="btn btn-outline">証明書{pendingCerts > 0 && <span className="badge badge-hot ml-1">{pendingCerts}</span>}</Link>
           <Link href="/admin/listings/new" className="btn">＋ 新規出品</Link>
         </div>

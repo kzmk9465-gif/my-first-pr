@@ -49,6 +49,8 @@ export type OripaPrize = {
   name: string;
   kind: PrizeKind;
   ref_price: number;
+  /** 参考価格の根拠（例: 当店の落札 2026-11 3件の中央値 / 他店落札の目安） */
+  ref_note: string;
   image_url: string | null;
   count_total: number;
   count_left: number;
@@ -116,10 +118,10 @@ export function setPackageStatus(id: number, status: "open" | "closed"): void {
   getDb().prepare("UPDATE oripa_packages SET status = ? WHERE id = ?").run(status, id);
 }
 
-export function addPrize(packageId: number, data: { rarity: Rarity; name: string; kind?: PrizeKind; ref_price?: number; image_url?: string | null; count: number }): number {
+export function addPrize(packageId: number, data: { rarity: Rarity; name: string; kind?: PrizeKind; ref_price?: number; ref_note?: string; image_url?: string | null; count: number }): number {
   const r = getDb()
-    .prepare("INSERT INTO oripa_prizes (package_id, rarity, name, kind, ref_price, image_url, count_total, count_left) VALUES (?, ?, ?, ?, ?, ?, ?, ?)")
-    .run(packageId, data.rarity, data.name, data.kind ?? "medaka", data.ref_price ?? 0, data.image_url ?? null, data.count, data.count);
+    .prepare("INSERT INTO oripa_prizes (package_id, rarity, name, kind, ref_price, ref_note, image_url, count_total, count_left) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    .run(packageId, data.rarity, data.name, data.kind ?? "medaka", data.ref_price ?? 0, data.ref_note ?? "", data.image_url ?? null, data.count, data.count);
   return Number(r.lastInsertRowid);
 }
 
@@ -350,4 +352,12 @@ export type PackageView = OripaPackage & { remaining: number; sellable: boolean;
 
 export function packageViews(openOnly = true): PackageView[] {
   return listPackages(openOnly).map((p) => ({ ...p, remaining: remaining(p.id), sellable: isSellable(p), prizes: listPrizes(p.id) }));
+}
+
+/** 当店オークションの落札実績（入金確認済み以降）。くじの参考価格の根拠に使う。 */
+export type OwnSale = { listing_id: number; title: string; price: number; paid_at: string };
+export function recentOwnSales(limit = 30): OwnSale[] {
+  return getDb()
+    .prepare("SELECT o.listing_id, l.title, o.price, o.created_at AS paid_at FROM orders o JOIN listings l ON l.id = o.listing_id WHERE o.status IN ('paid','shipped','completed') ORDER BY o.created_at DESC LIMIT ?")
+    .all(limit) as OwnSale[];
 }

@@ -6,7 +6,7 @@ import { openReports } from "@/lib/reports";
 import { formatDateTime } from "@/lib/format";
 import { handleReportAction } from "../actions";
 
-export const metadata: Metadata = { title: "奉行所（通報）" };
+export const metadata: Metadata = { title: "通報" };
 export const dynamic = "force-dynamic";
 
 export default async function AdminReportsPage() {
@@ -16,7 +16,7 @@ export default async function AdminReportsPage() {
   const items = openReports();
   return (
     <div className="space-y-4">
-      <h1 className="text-2xl font-black text-accent-2">奉行所：通報（{items.length}）</h1>
+      <h1 className="text-2xl font-black text-accent-2">通報（{items.length}）</h1>
       <div className="card divide-y divide-accent/10 text-sm">
         {items.map((r) => (
           <div key={r.id} className="p-3 flex flex-wrap justify-between gap-2">

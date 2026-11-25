@@ -34,7 +34,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
       <body className="min-h-screen flex flex-col">
         <header className="sticky top-0 z-40 backdrop-blur-md bg-background/85 border-b border-accent/25 shadow-[0_8px_24px_-20px_rgba(0,0,0,0.9)]">
           <nav className="mx-auto max-w-5xl px-4 h-16 flex items-center justify-between gap-4">
-            <Link href="/auctions" className="flex items-center gap-2.5 group">
+            <Link href="/oripa" className="flex items-center gap-2.5 group">
               <Seal size={34} className="drop-shadow-[0_0_10px_rgba(125,249,255,0.35)] transition-transform group-hover:scale-105" />
               <span className="leading-none">
                 <span className="block font-black tracking-[0.22em] text-accent-2 text-lg">{siteConfig.auctionName}</span>
@@ -42,8 +42,8 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               </span>
             </Link>
             <div className="flex items-center gap-3 text-sm">
+              <Link href="/oripa" className="hover:text-accent-2 font-bold">播州くじ</Link>
               <Link href="/auctions" className="hover:text-accent-2">競市</Link>
-              <Link href="/oripa" className="hover:text-accent-2">播州くじ</Link>
               <Link href="/zukan" className="hover:text-accent-2 hidden sm:inline">図鑑</Link>
               <Link href="/contests" className="hover:text-accent-2 hidden sm:inline">品評会</Link>
               <Link href="/guide" className="hover:text-accent-2 hidden sm:inline">説明</Link>
@@ -82,7 +82,7 @@ export default async function RootLayout({ children }: { children: React.ReactNo
           <div className="mx-auto max-w-5xl px-4 py-7 flex flex-wrap gap-x-5 gap-y-3 items-center justify-between">
             <div className="flex items-center gap-2 mr-2 opacity-80"><Seal size={22} /><span className="tracking-[0.2em] text-accent-2 font-bold">{siteConfig.auctionName}</span></div>
             <div className="flex flex-wrap gap-x-4 gap-y-1">
-              <Link href="/guide" className="hover:text-accent-2">オークション説明</Link>
+              <Link href="/guide" className="hover:text-accent-2">使い方</Link>
               <Link href="/zukan" className="hover:text-accent-2">メダカ図鑑</Link>
               <Link href="/contests" className="hover:text-accent-2">品評会</Link>
               <Link href="/legal/tokushoho" className="hover:text-accent-2">特定商取引法に基づく表記</Link>

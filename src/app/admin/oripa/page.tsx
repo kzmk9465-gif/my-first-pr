@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { getCurrentUser } from "@/lib/auth";
-import { KIND_LABEL, ORDER_EXPIRE_DAYS, RARITY_LABEL, packageViews, pendingOrders, prizeTotal, shippingRequests } from "@/lib/oripa";
+import { KIND_LABEL, ORDER_EXPIRE_DAYS, RARITY_LABEL, packageViews, pendingOrders, prizeTotal, shippingRequests, recentOwnSales } from "@/lib/oripa";
 import { formatDateTime } from "@/lib/format";
 import { addOripaPrizeAction, confirmOripaOrderAction, createOripaPackageAction, deleteOripaPrizeAction, oripaPackageStatusAction, shipOripaDrawAction } from "../actions";
 
@@ -17,6 +17,7 @@ export default async function AdminOripaPage({ searchParams }: { searchParams: P
   if (user.role !== "admin") redirect("/auctions");
   const sp = await searchParams;
   const pkgs = packageViews(false);
+  const ownSales = recentOwnSales(30);
   const pending = pendingOrders();
   const ships = shippingRequests();
 
@@ -99,7 +100,7 @@ export default async function AdminOripaPage({ searchParams }: { searchParams: P
                 {p.prizes.map((z) => (
                   <tr key={z.id}>
                     <td className="py-1.5 whitespace-nowrap font-bold">{RARITY_LABEL[z.rarity]}</td>
-                    <td className="py-1.5">{z.name} <span className="text-xs text-muted">{KIND_LABEL[z.kind]} ・ 参考 {yen(z.ref_price)}{z.image_url ? " ・ 画像あり" : ""}</span></td>
+                    <td className="py-1.5">{z.name} <span className="text-xs text-muted">{KIND_LABEL[z.kind]} ・ 参考 {yen(z.ref_price)}{z.ref_note ? `（${z.ref_note}）` : ""}{z.image_url ? " ・ 画像あり" : ""}</span></td>
                     <td className="py-1.5 text-right tnum whitespace-nowrap">残 {z.count_left}/{z.count_total}本</td>
                     <td className="py-1.5 text-right">
                       {z.count_left === z.count_total && <form action={deleteOripaPrizeAction}><input type="hidden" name="id" value={z.id} /><input type="hidden" name="package_id" value={p.id} /><button className="text-xs text-muted underline">削除</button></form>}
@@ -118,10 +119,24 @@ export default async function AdminOripaPage({ searchParams }: { searchParams: P
               <button className="btn">賞を追加</button>
               <label className="md:col-span-4 flex items-center gap-2 text-xs text-muted">実物写真（JPEG/PNG/WebP・8MBまで。本番では必ず添付）<input name="image" type="file" accept="image/jpeg,image/png,image/webp" className="input" /></label>
               <input name="image_url" className="input md:col-span-3" placeholder="または画像URL（任意）" />
+              <input name="ref_note" className="input md:col-span-7" placeholder="参考価格の根拠（例: 当店の落札 2026-11 3件の中央値 ／ 他店落札の目安 2026-11 n6 中央値）" />
             </form>
           </section>
         );
       })}
+      <section className="card p-4 space-y-2">
+        <h2 className="font-bold">参考価格の根拠に使える「当店の落札実績」（入金確認済み・新しい順）</h2>
+        <p className="text-xs text-muted">同じ品種・同じ単位（1ペアなど）の落札値を集め、件数と時期を添えて賞品の「参考価格の根拠」に書く。他店の落札値はこれが無い時だけ使う。</p>
+        {ownSales.length === 0 ? <p className="text-sm text-muted">まだ落札実績がありません（オークションで売れた魚がここに並びます）。</p> : (
+          <table className="w-full text-sm">
+            <tbody className="divide-y divide-accent/10">
+              {ownSales.map((s) => (
+                <tr key={s.listing_id}><td className="py-1 pr-2">{s.title}</td><td className="py-1 text-right tnum whitespace-nowrap">{yen(s.price)}</td><td className="py-1 pl-2 text-xs text-muted whitespace-nowrap">{s.paid_at.slice(0, 10)}</td></tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </section>
     </div>
   );
 }
