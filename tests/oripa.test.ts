@@ -8,76 +8,107 @@ const dir = fs.mkdtempSync(path.join(os.tmpdir(), "banshu-oripa-"));
 process.env.DATABASE_PATH = path.join(dir, "test.sqlite");
 
 const { getDb } = await import("../src/lib/db.ts");
-const { points } = await import("../src/lib/gacha.ts");
-const { draw, redeem, requestShipping, remaining, getPackage } = await import("../src/lib/oripa.ts");
+const { seedOripa } = await import("../src/lib/seed-demo.ts");
+const { addPrize, createOrder, createPackage, draw, getOrder, getPackage, isAdult, isSellable, listPrizes, markOrderPaid, remaining, requestShipping } = await import("../src/lib/oripa.ts");
 
-let rich: number; let poor: number;
+let adult: number; let minor: number; let pkgId: number;
+const ADULT = { id: 0, birthdate: "1990-01-01" };
 before(() => {
   const db = getDb();
-  rich = Number(db.prepare("INSERT INTO users (email, status) VALUES ('rich@example.com','approved')").run().lastInsertRowid);
-  poor = Number(db.prepare("INSERT INTO users (email, status) VALUES ('poor@example.com','approved')").run().lastInsertRowid);
-  db.prepare("INSERT INTO point_logs (user_id, delta, reason) VALUES (?, 20000, 'charge_mock')").run(rich);
+  adult = Number(db.prepare("INSERT INTO users (email, status, birthdate) VALUES ('adult@example.com','approved','1990-01-01')").run().lastInsertRowid);
+  minor = Number(db.prepare("INSERT INTO users (email, status, birthdate) VALUES ('minor@example.com','approved',?)").run(new Date(Date.now() - 10 * 365 * 86400_000).toISOString().slice(0, 10)).lastInsertRowid);
+  ADULT.id = adult;
+  seedOripa(db);
+  pkgId = getPackage("gokujo-rame")!.id;
 });
 
-test("ポイント不足では引けない", async () => {
-  const r = await draw(poor, "gokujo-rame", 1);
+test("18歳判定", () => {
+  assert.equal(isAdult("1990-01-01"), true);
+  assert.equal(isAdult(null), false);
+  assert.equal(isAdult("2020-01-01"), false);
+  const today = new Date("2026-11-25T00:00:00Z");
+  assert.equal(isAdult("2008-11-25", today), true);
+  assert.equal(isAdult("2008-11-26", today), false);
+});
+
+test("デモのくじは賞の本数の合計＝総口数で販売可", () => {
+  const pkg = getPackage("gokujo-rame")!;
+  assert.equal(isSellable(pkg), true);
+  assert.equal(listPrizes(pkg.id).reduce((a, p) => a + p.count_total, 0), pkg.total);
+});
+
+test("18歳未満は口を買えない", () => {
+  const r = createOrder({ id: minor, birthdate: new Date(Date.now() - 10 * 365 * 86400_000).toISOString().slice(0, 10) }, "gokujo-rame", 1, "mock");
   assert.equal(r.ok, false);
 });
 
-test("1回引くとポイントが消費され、当選が記録され、残り口数が減る", async () => {
-  const before = points(rich);
-  const beforeRemain = remaining("gokujo-rame");
-  // rng=0 → 先頭の景品（S賞）を引く
-  const r = await draw(rich, "gokujo-rame", 1, () => 0);
-  assert.ok(r.ok);
-  if (!r.ok) return;
-  assert.equal(r.results.length, 1);
-  assert.equal(r.results[0].rarity, "S");
-  assert.equal(points(rich), before - getPackage("gokujo-rame")!.pricePt);
-  assert.equal(r.balance, before - 5000);
-  assert.equal(remaining("gokujo-rame"), beforeRemain - 1);
+test("入金前は引けない。入金確認は1回だけ有効。入金後に引けて口数が減る", async () => {
+  const before = remaining(pkgId);
+  const o = createOrder(ADULT, "gokujo-rame", 2, "mock");
+  assert.ok(o.ok);
+  if (!o.ok) return;
+  assert.equal(o.amount, 10000);
+  assert.equal(remaining(pkgId), before - 2); // 入金待ちでも口は予約される
+  const d0 = await draw(adult, o.token, 1);
+  assert.equal(d0.ok, false);
+  assert.equal(markOrderPaid(o.token), true);
+  assert.equal(markOrderPaid(o.token), false); // 二重の入金確認は無効
+  const d1 = await draw(adult, o.token, 1);
+  assert.ok(d1.ok);
+  if (!d1.ok) return;
+  assert.equal(d1.results.length, 1);
+  assert.equal(d1.left, 1);
+  const d2 = await draw(adult, o.token, 2); // 残り1口なのに2口は不可
+  assert.equal(d2.ok, false);
+  const d3 = await draw(adult, o.token, 1);
+  assert.ok(d3.ok);
+  assert.equal(getOrder(o.token)!.drawn, 2);
+  const d4 = await draw(adult, o.token, 1); // 使い切った注文では引けない
+  assert.equal(d4.ok, false);
 });
 
-test("当選をポイント還元すると残高が増え、状態がredeemedになる", async () => {
-  const r = await draw(rich, "gokujo-rame", 1, () => 0); // S賞 redeemPt 60000
+test("非復元抽出：rng=0 は残っている最上位の賞を引き、本数が尽きると次の賞に移る", async () => {
+  const id = createPackage({ slug: "box-test", name: "テスト箱", price_yen: 1000, total: 3 });
+  addPrize(id, { rarity: "S", name: "S1", count: 1 });
+  addPrize(id, { rarity: "C", name: "C1", count: 2 });
+  const o = createOrder(ADULT, "box-test", 3, "mock");
+  assert.ok(o.ok);
+  if (!o.ok) return;
+  markOrderPaid(o.token);
+  const r = await draw(adult, o.token, 3, () => 0);
   assert.ok(r.ok);
   if (!r.ok) return;
-  const id = r.results[0].id;
-  const before = points(rich);
-  const red = redeem(rich, [id]);
-  assert.ok(red.ok);
-  if (!red.ok) return;
-  assert.equal(red.gained, r.results[0].redeemPt);
-  assert.equal(red.balance, before + r.results[0].redeemPt);
-  const row = getDb().prepare("SELECT status FROM oripa_draws WHERE id = ?").get(id) as { status: string };
-  assert.equal(row.status, "redeemed");
-  // 二重還元はできない
-  const again = redeem(rich, [id]);
-  assert.ok(again.ok && again.gained === 0);
+  assert.deepEqual(r.results.map((x) => x.rarity), ["S", "C", "C"]);
+  const left = listPrizes(id);
+  assert.equal(left.find((p) => p.name === "S1")!.count_left, 0);
+  assert.equal(left.find((p) => p.name === "C1")!.count_left, 0);
+  assert.equal(remaining(id), 0);
+  // 完売後は買えない
+  const again = createOrder(ADULT, "box-test", 1, "mock");
+  assert.equal(again.ok, false);
 });
 
-test("発送依頼で状態がship_requestedになる", async () => {
-  const r = await draw(rich, "gokujo-rame", 1, () => 0);
+test("賞の本数が総口数と合わないくじは売れない", () => {
+  const id = createPackage({ slug: "half-box", name: "半端な箱", price_yen: 1000, total: 5 });
+  addPrize(id, { rarity: "C", name: "C", count: 3 });
+  assert.equal(isSellable(getPackage("half-box")!), false);
+  const o = createOrder(ADULT, "half-box", 1, "mock");
+  assert.equal(o.ok, false);
+});
+
+test("当選品は発送依頼できる（還元はできない）", async () => {
+  const o = createOrder(ADULT, "ryusei", 1, "mock");
+  assert.ok(o.ok);
+  if (!o.ok) return;
+  markOrderPaid(o.token);
+  const r = await draw(adult, o.token, 1);
   assert.ok(r.ok);
   if (!r.ok) return;
-  const id = r.results[0].id;
-  const ship = await requestShipping(rich, [id]);
+  const ship = await requestShipping(adult, [r.results[0].id]);
   assert.ok(ship.ok);
-  const row = getDb().prepare("SELECT status FROM oripa_draws WHERE id = ?").get(id) as { status: string };
+  const row = getDb().prepare("SELECT status FROM oripa_draws WHERE id = ?").get(r.results[0].id) as { status: string };
   assert.equal(row.status, "ship_requested");
-});
-
-test("残り口数を超える連数は引けない", async () => {
-  const db = getDb();
-  const u = Number(db.prepare("INSERT INTO users (email, status) VALUES ('ryusei@example.com','approved')").run().lastInsertRowid);
-  db.prepare("INSERT INTO point_logs (user_id, delta, reason) VALUES (?, 1000000, 'charge_mock')").run(u);
-  // ryusei を残り5口まで埋める（total 150）
-  const pkg = getPackage("ryusei")!;
-  const ins = db.prepare("INSERT INTO oripa_draws (user_id, package_id, rarity, prize_name, ref_price, redeem_pt) VALUES (?, 'ryusei','C','x',0,0)");
-  for (let i = 0; i < pkg.total - 5; i++) ins.run(u);
-  assert.equal(remaining("ryusei"), 5);
-  const r = await draw(u, "ryusei", 10);
-  assert.equal(r.ok, false); // 残り5口に10連は不可
-  const r1 = await draw(u, "ryusei", 1);
-  assert.ok(r1.ok);
+  // 旧「還元」の入口が無いこと（モジュールに redeem が存在しない）
+  const mod = await import("../src/lib/oripa.ts");
+  assert.equal("redeem" in mod, false);
 });

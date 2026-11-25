@@ -34,6 +34,8 @@ export default async function RegisterPage({ searchParams }: { searchParams: Pro
             <label className="block">電話番号 *<input name="shipping_phone" required className="input mt-1" defaultValue={user.shipping_phone ?? ""} placeholder="079-000-0000" /></label>
           </div>
           <label className="block">住所 *<input name="shipping_address" required className="input mt-1" defaultValue={user.shipping_address ?? ""} placeholder="兵庫県姫路市…" /></label>
+          <label className="block">生年月日 *<input name="birthdate" type="date" required className="input mt-1" defaultValue={user.birthdate ?? ""} max={new Date().toISOString().slice(0, 10)} />
+            <span className="block text-xs text-muted mt-1">播州くじ（オンラインくじ）は18歳以上の方のみご利用いただけます。年齢の確認に使います。</span></label>
           <label className="block">宛名（氏名と異なる場合）<input name="shipping_name" className="input mt-1" defaultValue={user.shipping_name ?? ""} /></label>
           <label className="flex items-start gap-2">
             <input type="checkbox" name="agree" className="mt-1" required />

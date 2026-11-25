@@ -16,19 +16,20 @@ export type User = {
   shipping_postal: string | null;
   shipping_address: string | null;
   shipping_phone: string | null;
+  birthdate: string | null;
   created_at: string;
 };
 
-/** 会員登録フォーム（氏名・屋号・Instagram・発送先）の保存。承認待ちにする。 */
+/** 会員登録フォーム（氏名・屋号・Instagram・発送先・生年月日）の保存。承認待ちにする。 */
 export function registerProfile(
   userId: number,
-  data: { name: string; shop_name: string; instagram: string; shipping_name: string; shipping_postal: string; shipping_address: string; shipping_phone: string },
+  data: { name: string; shop_name: string; instagram: string; shipping_name: string; shipping_postal: string; shipping_address: string; shipping_phone: string; birthdate?: string },
 ): void {
   getDb()
     .prepare(
-      `UPDATE users SET name = ?, shop_name = ?, instagram = ?, shipping_name = ?, shipping_postal = ?, shipping_address = ?, shipping_phone = ? WHERE id = ?`,
+      `UPDATE users SET name = ?, shop_name = ?, instagram = ?, shipping_name = ?, shipping_postal = ?, shipping_address = ?, shipping_phone = ?, birthdate = COALESCE(?, birthdate) WHERE id = ?`,
     )
-    .run(data.name, data.shop_name || null, data.instagram || null, data.shipping_name, data.shipping_postal, data.shipping_address, data.shipping_phone, userId);
+    .run(data.name, data.shop_name || null, data.instagram || null, data.shipping_name, data.shipping_postal, data.shipping_address, data.shipping_phone, data.birthdate || null, userId);
 }
 
 /** 登録フォームが未入力か（氏名と住所が無ければ /register へ誘導する） */

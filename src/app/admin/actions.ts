@@ -232,6 +232,81 @@ export async function fulfillPrizeAction(formData: FormData): Promise<void> {
   redirect("/admin/gacha");
 }
 
+// ---- 播州くじ（確定版）----
+
+export async function createOripaPackageAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const { createPackage, getPackage } = await import("@/lib/oripa");
+  const name = str(formData, "name", 60);
+  const slug = str(formData, "slug", 40).toLowerCase();
+  const price = Number(str(formData, "price_yen"));
+  const total = Number(str(formData, "total"));
+  if (!name || !/^[a-z0-9-]{2,40}$/.test(slug)) redirect(`/admin/oripa?error=${encodeURIComponent("名前とURL名（英小文字・数字・-）は必須です。")}`);
+  if (!Number.isInteger(price) || price < 100 || !Number.isInteger(total) || total < 1) redirect(`/admin/oripa?error=${encodeURIComponent("価格と総口数を正しく入力してください。")}`);
+  if (getPackage(slug)) redirect(`/admin/oripa?error=${encodeURIComponent("そのURL名は使われています。")}`);
+  createPackage({ slug, name, subtitle: str(formData, "subtitle", 120), price_yen: price, total });
+  revalidatePath("/oripa");
+  redirect("/admin/oripa?saved=1");
+}
+
+export async function addOripaPrizeAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const { addPrize, getPackageById } = await import("@/lib/oripa");
+  const pkgId = Number(formData.get("package_id"));
+  const name = str(formData, "name", 80);
+  const rarity = str(formData, "rarity", 1);
+  const kind = str(formData, "kind", 10);
+  const count = Number(str(formData, "count"));
+  if (!getPackageById(pkgId) || !name || !["S", "A", "B", "C"].includes(rarity) || !["medaka", "goods", "card"].includes(kind) || !Number.isInteger(count) || count < 1) {
+    redirect(`/admin/oripa?error=${encodeURIComponent("賞品名・賞・種類・本数を正しく入力してください。")}`);
+  }
+  addPrize(pkgId, { rarity: rarity as "S" | "A" | "B" | "C", name, kind: kind as "medaka" | "goods" | "card", ref_price: Number(str(formData, "ref_price")) || 0, image_url: str(formData, "image_url", 300) || null, count });
+  revalidatePath("/oripa");
+  redirect("/admin/oripa?saved=1");
+}
+
+export async function deleteOripaPrizeAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const { deletePrize } = await import("@/lib/oripa");
+  if (!deletePrize(Number(formData.get("id")))) redirect(`/admin/oripa?error=${encodeURIComponent("当選が出ている賞は削除できません。")}`);
+  revalidatePath("/oripa");
+  redirect("/admin/oripa?saved=1");
+}
+
+export async function oripaPackageStatusAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const { setPackageStatus } = await import("@/lib/oripa");
+  const status = String(formData.get("status"));
+  if (status === "open" || status === "closed") setPackageStatus(Number(formData.get("id")), status);
+  revalidatePath("/oripa");
+  redirect("/admin/oripa");
+}
+
+/** 銀行振込の入金確認（または取消）。pending の行だけが対象なので二重確認にならない */
+export async function confirmOripaOrderAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const { cancelOrder, getOrder, markOrderPaid } = await import("@/lib/oripa");
+  const { notifyUser } = await import("@/lib/notify");
+  const token = str(formData, "token", 60);
+  const order = getOrder(token);
+  if (!order) redirect(`/admin/oripa?error=${encodeURIComponent("注文が見つかりません。")}`);
+  if (formData.get("cancel") === "1") {
+    cancelOrder(token);
+  } else if (markOrderPaid(token)) {
+    const u = getDb().prepare("SELECT id, email, line_user_id FROM users WHERE id = ?").get(order!.user_id) as { id: number; email: string; line_user_id: string | null };
+    await notifyUser(u, "system", `✅ 播州くじのご入金を確認しました（注文番号 ${token.slice(-6).toUpperCase()}・${order!.count}口）。播州くじのページから引けます。`).catch(() => {});
+  }
+  revalidatePath("/oripa");
+  redirect("/admin/oripa?saved=1");
+}
+
+export async function shipOripaDrawAction(formData: FormData): Promise<void> {
+  await requireAdmin();
+  const { markDrawShipped } = await import("@/lib/oripa");
+  markDrawShipped(Number(formData.get("id")));
+  redirect("/admin/oripa?saved=1");
+}
+
 export async function handleReportAction(formData: FormData): Promise<void> {
   await requireAdmin();
   const { handleReport } = await import("@/lib/reports");

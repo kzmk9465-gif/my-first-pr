@@ -12,27 +12,29 @@ const HUES: Record<Rarity, [string, string]> = {
   C: ["#64748B", "#334155"],
 };
 const yen = (n: number) => `${n.toLocaleString("ja-JP")} 円`;
-const pt = (n: number) => `${n.toLocaleString("ja-JP")} pt`;
 
 type Step = "sealed" | "rising" | "reveal";
 
 type Props = {
   pkgName: string;
-  pricePt: number;
   drawCount: number;
   /** 抽選のたびに増える識別子。変わると演出を頭から再生する。 */
   drawId: number;
   results: DrawResult[] | null;
-  balance: number;
+  /** この注文で引ける残りの口数 */
+  left: number;
   busy?: boolean;
   error?: string | null;
   onClose: () => void;
   onShip: () => void;
-  onRedeemAgain: () => void;
   onAgain: () => void;
 };
 
-export default function GachaModal({ pkgName, pricePt, drawCount, drawId, results, balance, busy, error, onClose, onShip, onRedeemAgain, onAgain }: Props) {
+/**
+ * 開封演出。水鏡の球をタップ → 波紋 → 当選カード。
+ * 当選品は必ず発送する（ポイント還元・買い戻しのボタンは置かない）。
+ */
+export default function GachaModal({ pkgName, drawCount, drawId, results, left, busy, error, onClose, onShip, onAgain }: Props) {
   const [step, setStep] = useState<Step>("sealed");
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const reduce = useRef(false);
@@ -51,7 +53,7 @@ export default function GachaModal({ pkgName, pricePt, drawCount, drawId, result
   const best = results.reduce<Rarity>((a, r) => (RANK[r.rarity] > RANK[a] ? r.rarity : a), "C");
   const [c1, c2] = HUES[best];
   const rainbow = best === "S";
-  const redeemTotal = results.filter((r) => r.status === "won").reduce((a, r) => a + r.redeemPt, 0);
+  const unshipped = results.filter((r) => r.status === "won").length;
 
   const open = () => {
     if (step !== "sealed") return;
@@ -82,7 +84,7 @@ export default function GachaModal({ pkgName, pricePt, drawCount, drawId, result
               <span className="pointer-events-none absolute anim-hue" style={{ width: 260, height: 260, borderRadius: "999px",
                 background: "conic-gradient(from 0deg,#ff5f6d,#ffc371,#7DF9FF,#845ec2,#ff5f6d)", opacity: .55, filter: "blur(18px)" }} />
             )}
-            {/* 光る水球／桐箱 */}
+            {/* 光る水球 */}
             <div className={`relative ${step === "sealed" ? "anim-float" : "anim-rise"}`}>
               <div className={step === "sealed" ? "anim-pulse" : ""} style={{
                 width: 150, height: 150, borderRadius: "999px",
@@ -97,7 +99,7 @@ export default function GachaModal({ pkgName, pricePt, drawCount, drawId, result
             <p className="mt-10 text-sm tracking-widest" style={{ color: step === "sealed" ? "var(--accent-2)" : c1 }}>
               {step === "sealed" ? "画面をタップして開封" : rainbow ? "―― 極彩の光。特賞確定 ――" : best === "A" ? "―― 黄金の閃光。激アツ ――" : "―― 光が差し込む ――"}
             </p>
-            <p className="mt-1 text-xs text-muted">{pkgName} ・ {drawCount === 10 ? "10連" : "1回"}</p>
+            <p className="mt-1 text-xs text-muted">{pkgName} ・ {drawCount}口</p>
           </button>
         ) : (
           <div className="anim-in">
@@ -107,21 +109,18 @@ export default function GachaModal({ pkgName, pricePt, drawCount, drawId, result
               {results.map((r, i) => <ResultCard key={r.id} r={r} delay={i * 0.06} single={results.length === 1} />)}
             </div>
 
-            <div className="mt-3 text-sm text-muted">所持ポイント <span className="tnum text-accent-2 font-bold">{pt(balance)}</span></div>
             {error && <p className="text-danger text-sm mt-2">{error}</p>}
 
             <div className="mt-3 grid gap-2">
-              <button onClick={onShip} disabled={busy} className="btn w-full !py-2.5">🚚 生体を発送依頼する（{results.length}点）</button>
-              {redeemTotal > 0 && (
-                <button onClick={onRedeemAgain} disabled={busy}
-                  className="w-full rounded-xl py-2.5 font-bold border transition disabled:opacity-50"
-                  style={{ color: "#05121f", background: "linear-gradient(180deg,#FFE08A,#FFB347)", borderColor: "transparent", boxShadow: "0 0 18px rgba(255,195,113,.4)" }}>
-                  ✨ {pt(redeemTotal)} に還元してもう一度引く！
-                </button>
+              {unshipped > 0 ? (
+                <button onClick={onShip} disabled={busy} className="btn w-full !py-2.5">🚚 当選品を発送依頼する（{unshipped}点）</button>
+              ) : (
+                <p className="text-sm text-accent-2 border border-accent/30 rounded-xl p-2">🚚 発送依頼を受け付けました。発送までお待ちください。</p>
               )}
-              <button onClick={onAgain} disabled={busy} className="btn btn-outline w-full !py-2">もう一度引く（{pt(pricePt * drawCount)}）</button>
+              {left > 0 && <button onClick={onAgain} disabled={busy} className="btn btn-outline w-full !py-2">続けて引く（この注文の残り {left} 口）</button>}
               <button onClick={onClose} className="text-xs text-muted underline mt-0.5">とじる</button>
             </div>
+            <p className="mt-2 text-[10px] text-muted">当選品は後からマイページ／播州くじのページでも発送依頼できます（当選から30日以内）。</p>
           </div>
         )}
       </div>
@@ -131,22 +130,20 @@ export default function GachaModal({ pkgName, pricePt, drawCount, drawId, result
 
 function ResultCard({ r, delay, single }: { r: DrawResult; delay: number; single: boolean }) {
   const [c1, c2] = HUES[r.rarity];
-  const redeemed = r.status === "redeemed";
-  const shipped = r.status === "ship_requested";
+  const shipped = r.status !== "won";
   return (
     <div className={`anim-reveal rounded-xl border overflow-hidden text-left rank-${r.rarity}`}
       style={{ animationDelay: `${delay}s`, borderColor: r.rarity === "S" || r.rarity === "A" ? c1 : "rgba(255,255,255,.12)", background: "#101726" }}>
       <div className={`relative ${single ? "aspect-[4/3]" : "aspect-square"} flex items-center justify-center overflow-hidden`}
-        style={{ background: `radial-gradient(circle at 40% 30%, ${c2}, ${c1} 70%, #06121f)` }}>
+        style={{ background: r.imageUrl ? `url(${r.imageUrl}) center/cover` : `radial-gradient(circle at 40% 30%, ${c2}, ${c1} 70%, #06121f)` }}>
         <span className="pointer-events-none absolute inset-0" style={{ background: "linear-gradient(110deg,transparent 30%,rgba(255,255,255,.35) 50%,transparent 70%)", animation: "oripa-sheen 2.4s ease-in-out infinite", animationDelay: `${delay}s` }} />
-        <span className="relative font-black text-white/90" style={{ fontSize: single ? "2rem" : "1.2rem", textShadow: "0 2px 12px rgba(0,0,0,.5)" }}>{LABEL[r.rarity]}</span>
+        {!r.imageUrl && <span className="relative font-black text-white/90" style={{ fontSize: single ? "2rem" : "1.2rem", textShadow: "0 2px 12px rgba(0,0,0,.5)" }}>{LABEL[r.rarity]}</span>}
         <span className="absolute top-1 left-1 text-[10px] font-bold px-1.5 py-0.5 rounded-full tnum"
           style={{ color: "#05121f", background: c1 }}>{LABEL[r.rarity]}</span>
       </div>
       <div className="p-2">
         <div className={`font-bold leading-snug ${single ? "text-sm" : "text-[11px]"} line-clamp-2`}>{r.name}</div>
-        <div className="text-[10px] text-muted mt-0.5">市場参考 <span className="tnum">{yen(r.refPrice)}</span></div>
-        {redeemed && <div className="text-[10px] mt-0.5" style={{ color: "#FFD36E" }}>✨ {r.redeemPt.toLocaleString("ja-JP")} pt に還元済み</div>}
+        <div className="text-[10px] text-muted mt-0.5">参考価格 <span className="tnum">{yen(r.refPrice)}</span></div>
         {shipped && <div className="text-[10px] mt-0.5 text-accent-2">🚚 発送依頼済み</div>}
       </div>
     </div>

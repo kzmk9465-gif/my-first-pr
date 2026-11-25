@@ -277,6 +277,47 @@ CREATE TABLE IF NOT EXISTS oripa_draws (
 );
 CREATE INDEX IF NOT EXISTS idx_oripa_pkg ON oripa_draws(package_id);
 CREATE INDEX IF NOT EXISTS idx_oripa_user ON oripa_draws(user_id);
+-- 播州くじ（第7段階・確定版）：有限の箱。総口数と各賞の本数を先に決め、引いた分だけ減る
+CREATE TABLE IF NOT EXISTS oripa_packages (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  slug TEXT NOT NULL UNIQUE,
+  name TEXT NOT NULL,
+  subtitle TEXT NOT NULL DEFAULT '',
+  price_yen INTEGER NOT NULL,
+  total INTEGER NOT NULL,
+  hue1 TEXT NOT NULL DEFAULT '#0ea5b7',
+  hue2 TEXT NOT NULL DEFAULT '#0284C7',
+  status TEXT NOT NULL DEFAULT 'open',
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now'))
+);
+CREATE TABLE IF NOT EXISTS oripa_prizes (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  package_id INTEGER NOT NULL REFERENCES oripa_packages(id) ON DELETE CASCADE,
+  rarity TEXT NOT NULL,
+  name TEXT NOT NULL,
+  kind TEXT NOT NULL DEFAULT 'medaka',
+  ref_price INTEGER NOT NULL DEFAULT 0,
+  image_url TEXT,
+  count_total INTEGER NOT NULL,
+  count_left INTEGER NOT NULL
+);
+CREATE INDEX IF NOT EXISTS idx_oripa_prizes_pkg ON oripa_prizes(package_id);
+-- 口の購入（汎用ポイントは売らない。特定のくじの口を都度買う）
+CREATE TABLE IF NOT EXISTS oripa_orders (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  token TEXT NOT NULL UNIQUE,
+  user_id INTEGER NOT NULL REFERENCES users(id),
+  package_id INTEGER NOT NULL REFERENCES oripa_packages(id),
+  count INTEGER NOT NULL,
+  amount_yen INTEGER NOT NULL,
+  provider TEXT NOT NULL DEFAULT 'bank',
+  status TEXT NOT NULL DEFAULT 'pending',
+  drawn INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ','now')),
+  paid_at TEXT
+);
+CREATE INDEX IF NOT EXISTS idx_oripa_orders_user ON oripa_orders(user_id);
+CREATE INDEX IF NOT EXISTS idx_oripa_orders_pkg ON oripa_orders(package_id, status);
 `;
 
 /** 既存DBに後から追加した列（ALTER TABLE は IF NOT EXISTS が無いので手動で確認） */
@@ -313,6 +354,11 @@ const COLUMN_MIGRATIONS: [table: string, column: string, ddl: string][] = [
   // 第6段階：オンライン決済
   ["sellers", "accepts_online", "INTEGER NOT NULL DEFAULT 0"],
   ["orders", "paid_via", "TEXT"],
+  // 第7段階：播州くじ確定版（年齢確認・有限の箱・口の購入）
+  ["users", "birthdate", "TEXT"],
+  ["oripa_draws", "order_id", "INTEGER REFERENCES oripa_orders(id)"],
+  ["oripa_draws", "prize_id", "INTEGER REFERENCES oripa_prizes(id)"],
+  ["oripa_draws", "kind", "TEXT NOT NULL DEFAULT 'medaka'"],
 ];
 
 function migrate(db: DatabaseSync): void {

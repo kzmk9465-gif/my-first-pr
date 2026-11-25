@@ -70,7 +70,8 @@ export default function GuidePage() {
         <ul className="list-disc pl-5 space-y-1">
           <li><Link href="/zukan" className="underline">メダカ図鑑</Link>：品種とブリーダーのデータベース。承認済み会員はご自身の作出品種を登録できます（お店の確認後に掲載）。</li>
           <li><Link href="/contests" className="underline">品評会</Link>：自慢の個体をエントリーし、会員の投票で順位を決めます。</li>
-          <li>ガチャ：マイページで毎日ログインボーナスを受け取り、10ポイントで1回挑戦。当選すると景品をお送りします。</li>
+          <li><Link href="/oripa" className="underline">播州くじ</Link>：総口数と各賞の本数が先に決まった箱売りのオンラインくじ（18歳以上）。口を買い、入金確認後に引けます。全口が賞品付きで、当選品は発送でお届けします（ポイント化・買い取りはありません）。</li>
+          <li>ガチャ：マイページで毎日ログインボーナスを受け取り、10ポイントで1回挑戦。当選すると景品をお送りします（無料のおまけです）。</li>
           <li>不審な出品を見つけたら、出品ページの「奉行所へ通報する」からお知らせください。</li>
         </ul>
       </section>

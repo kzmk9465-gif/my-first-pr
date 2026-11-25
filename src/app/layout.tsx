@@ -10,8 +10,6 @@ import Ticker from "@/components/Ticker";
 import Kawaraban from "@/components/Kawaraban";
 import Broadcast from "@/components/Broadcast";
 import Seal from "@/components/Seal";
-import ChargePill from "@/components/ChargePill";
-import { points } from "@/lib/gacha";
 
 export const metadata: Metadata = {
   title: { default: `${siteConfig.auctionName} | ${siteConfig.name}`, template: `%s | ${siteConfig.name}` },
@@ -26,7 +24,6 @@ export const viewport: Viewport = { themeColor: "#080C14" };
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
   const user = await getCurrentUser();
   const isSeller = user ? !!getSellerForUser(user.id) : false;
-  const balance = user ? points(user.id) : 0;
   const alerts = activeNews("alert", 3);
   const broadcast = activeNews("broadcast", 1)[0];
   const news = activeNews("news", 10).map((n) => ({ id: n.id, title: n.title, body: n.body, image_url: n.image_url, created_at: n.created_at }));
@@ -52,7 +49,6 @@ export default async function RootLayout({ children }: { children: React.ReactNo
               <Link href="/guide" className="hover:text-accent-2 hidden sm:inline">説明</Link>
               {user ? (
                 <>
-                  <ChargePill balance={balance} />
                   {isSeller && <Link href="/sell/dashboard" className="hover:text-accent-2 hidden sm:inline">出品</Link>}
                   {user.role === "admin" && <Link href="/admin" className="hover:text-accent-2 hidden sm:inline">管理</Link>}
                   <Link href="/mypage" className="btn btn-outline !py-1 !px-3">

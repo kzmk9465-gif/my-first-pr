@@ -37,6 +37,7 @@ export default async function AdminPage() {
           <Link href="/admin/news" className="btn btn-outline">瓦版・告知</Link>
           <Link href="/admin/zukan" className="btn btn-outline">図鑑{pendingVar > 0 && <span className="badge badge-hot ml-1">{pendingVar}</span>}</Link>
           <Link href="/admin/contests" className="btn btn-outline">品評会</Link>
+          <Link href="/admin/oripa" className="btn btn-outline">播州くじ</Link>
           <Link href="/admin/gacha" className="btn btn-outline">ガチャ</Link>
           <Link href="/admin/reports" className="btn btn-outline">奉行所{reports > 0 && <span className="badge badge-hot ml-1">{reports}</span>}</Link>
           <Link href="/admin/certificates" className="btn btn-outline">証明書{pendingCerts > 0 && <span className="badge badge-hot ml-1">{pendingCerts}</span>}</Link>
