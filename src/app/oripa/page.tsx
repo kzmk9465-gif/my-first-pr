@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { siteConfig } from "@/lib/config";
 import Link from "next/link";
 import { getCurrentUser, canBid } from "@/lib/auth";
 import { CLAIM_DAYS, FREE_SHIPPING_COUNT, ORDER_EXPIRE_DAYS, RARITY_LABEL, SHIPPING_YEN, drawableOrders, myOrders, packageViews, unclaimedWins } from "@/lib/oripa";
@@ -104,6 +105,7 @@ export default async function OripaPage({ searchParams }: { searchParams: Promis
           <li>18歳未満の方はご購入いただけません。購入後の返金はできません。</li>
           <li>送料は1回の注文につき{yen(SHIPPING_YEN)}（{FREE_SHIPPING_COUNT}口以上で無料）。口の代金と合わせて1回でお支払いいただきます。</li>
           <li>参考価格は、当店のオークション（競市）での落札実績か、それが無い品種は他店の落札価格の目安です（根拠・件数・時期は各賞に記載）。当店の販売価格ではなく、価値を保証するものではありません。</li>
+          <li>お問い合わせ・入金のご連絡は{siteConfig.line.addFriendUrl ? <a className="text-line underline" href={siteConfig.line.addFriendUrl} target="_blank" rel="noreferrer">{siteConfig.name}の公式LINE</a> : siteConfig.name + "の公式LINE"}へ。</li>
         </ul>
       </section>
     </div>

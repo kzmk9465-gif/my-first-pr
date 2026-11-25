@@ -12,6 +12,7 @@ export default function TokushohoPage() {
     ["所在地", L.address],
     ["電話番号", L.phone],
     ["メールアドレス", L.email],
+    ["お問い合わせ窓口", siteConfig.line.addFriendUrl ? siteConfig.name + "の公式LINE（" + siteConfig.line.addFriendUrl + "）またはメール" : siteConfig.name + "の公式LINEまたはメール"],
     ["販売価格", "オークション：各出品の落札価格（消費税込み）。播州くじ：各くじの1口の価格（消費税込み）に口数を掛けた金額"],
     ["商品代金以外の必要料金", L.shippingFee + " 銀行振込の場合の振込手数料はお客様負担です。播州くじ：1回のご注文につき送料" + SHIPPING_YEN.toLocaleString("ja-JP") + "円（" + FREE_SHIPPING_COUNT + "口以上のご注文は無料）。送料は口の代金と合わせてお支払いいただきます。"],
     ["支払方法", `${siteConfig.payment.method}。オンライン決済に対応する場合は外部の決済代行事業者の画面で行われ、当方はカード番号等を保持しません。`],

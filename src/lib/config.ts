@@ -2,8 +2,8 @@
 export const siteConfig = {
   name: process.env.SITE_NAME ?? "播州めだか",
   auctionName: process.env.AUCTION_NAME ?? "播州オク",
-  auctionNameEn: "BANSHU MEDAKA AUCTION",
-  tagline: "THE PRIVATE MEDAKA AUCTION",
+  auctionNameEn: "BANSHU MEDAKA KUJI & AUCTION",
+  tagline: "播州から、くじと競市。",
   baseUrl: process.env.BASE_URL ?? "http://localhost:3000",
   /** 終了間際の入札で延長する秒数（デフォルト5分） */
   autoExtendSeconds: Number(process.env.AUTO_EXTEND_SECONDS ?? 300),
@@ -66,9 +66,9 @@ export const siteConfig = {
 };
 
 export const FEE_PLAN_LABELS: Record<string, string> = {
-  self: "セルフプラン（出品・撮影・発送を自分で）",
-  support: "サポートプラン（撮影・説明文をお店が支援）",
-  full: "フルプラン（魚を預けて販売はお店に全部おまかせ）",
+  self: "自分で出す（出品・撮影・発送を自分で）",
+  support: "お店が手伝う（撮影・説明文をお店が支援）",
+  full: "お店にまかせる（魚を預けて販売はお店に全部おまかせ）",
 };
 
 export const ORDER_STATUS_LABELS: Record<string, string> = {

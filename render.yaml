@@ -72,3 +72,5 @@ services:
         sync: false
       - key: LEGAL_EMAIL
         sync: false
+      - key: LINE_ADD_FRIEND_URL  # 播州めだか公式LINEの友だち追加URL(画面で入力)
+        sync: false
