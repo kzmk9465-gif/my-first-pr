@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getCurrentUser, canBid } from "@/lib/auth";
-import { CLAIM_DAYS, ORDER_EXPIRE_DAYS, RARITY_LABEL, drawableOrders, myOrders, packageViews, unclaimedWins } from "@/lib/oripa";
+import { CLAIM_DAYS, FREE_SHIPPING_COUNT, ORDER_EXPIRE_DAYS, RARITY_LABEL, SHIPPING_YEN, drawableOrders, myOrders, packageViews, unclaimedWins } from "@/lib/oripa";
 import OripaCard, { type PkgLite } from "@/components/OripaCard";
 import { formatDateTime } from "@/lib/format";
 import { shipAllOripaAction } from "./actions";
@@ -102,7 +102,8 @@ export default async function OripaPage({ searchParams }: { searchParams: Promis
           <li>各くじは総口数と各賞の本数が先に決まっていて、引かれた分だけ減ります。残本数は常に表示します。</li>
           <li>全口が賞品付きです。当選品のポイント化・買い取り・他の商品との交換はできません。</li>
           <li>18歳未満の方はご購入いただけません。購入後の返金はできません。</li>
-          <li>参考価格は当店の通常販売価格または市場の目安で、保証するものではありません。</li>
+          <li>送料は1回の注文につき{yen(SHIPPING_YEN)}（{FREE_SHIPPING_COUNT}口以上で無料）。口の代金と合わせて1回でお支払いいただきます。</li>
+          <li>参考価格は他店のオークション落札価格の目安（中央値・期間・件数は各賞の説明に記載）で、当店の販売価格ではありません。価値を保証するものではありません。</li>
         </ul>
       </section>
     </div>

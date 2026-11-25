@@ -359,6 +359,7 @@ const COLUMN_MIGRATIONS: [table: string, column: string, ddl: string][] = [
   ["oripa_draws", "order_id", "INTEGER REFERENCES oripa_orders(id)"],
   ["oripa_draws", "prize_id", "INTEGER REFERENCES oripa_prizes(id)"],
   ["oripa_draws", "kind", "TEXT NOT NULL DEFAULT 'medaka'"],
+  ["oripa_orders", "shipping_yen", "INTEGER NOT NULL DEFAULT 0"],
 ];
 
 function migrate(db: DatabaseSync): void {

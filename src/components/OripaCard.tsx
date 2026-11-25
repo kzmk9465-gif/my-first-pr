@@ -5,6 +5,7 @@ import Link from "next/link";
 import GachaModal from "./GachaModal";
 import { buyOripaAction, drawOripaAction, shipOripaAction } from "@/app/oripa/actions";
 import type { DrawResult, Rarity } from "@/lib/oripa";
+import { FREE_SHIPPING_COUNT, SHIPPING_YEN, shippingFor } from "@/lib/oripa-shipping";
 
 export type PrizeLite = { id: number; rarity: Rarity; name: string; kind: string; ref_price: number; count_total: number; count_left: number };
 export type PkgLite = {
@@ -87,7 +88,7 @@ export default function OripaCard({ pkg, remaining: remaining0, sellable, logged
         {/* 価格と残り */}
         <div className="flex items-end justify-between">
           <div>
-            <div className="text-[11px] text-muted">1口（税込・送料込み）</div>
+            <div className="text-[11px] text-muted">1口（税込）・送料 {yen(SHIPPING_YEN)}／1回の注文（{FREE_SHIPPING_COUNT}口以上で無料）</div>
             <div className="tnum text-xl font-bold text-accent-2">{yen(pkg.price_yen)}</div>
           </div>
           <div className="text-right text-[11px] text-muted tnum">残り {remaining} / {pkg.total}口</div>
@@ -139,7 +140,7 @@ export default function OripaCard({ pkg, remaining: remaining0, sellable, logged
             <input type="hidden" name="slug" value={pkg.slug} />
             <select name="count" defaultValue={1} className="input !py-2 text-sm" aria-label="口数">
               {Array.from({ length: Math.min(10, remaining) }, (_, i) => i + 1).map((n) => (
-                <option key={n} value={n}>{n}口（{yen(pkg.price_yen * n)}）</option>
+                <option key={n} value={n}>{n}口（{yen(pkg.price_yen * n + shippingFor(n))}{shippingFor(n) ? " 送料込" : " 送料無料"}）</option>
               ))}
             </select>
             <button className="btn !py-2 text-sm">口を買う</button>

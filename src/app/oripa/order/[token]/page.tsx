@@ -50,6 +50,7 @@ export default async function OripaOrderPage({ params }: { params: Promise<{ tok
         <tbody className="divide-y divide-accent/10">
           <tr><th className="text-left text-muted py-2 w-28 font-normal">くじ</th><td className="py-2">{pkg.name}</td></tr>
           <tr><th className="text-left text-muted py-2 font-normal">口数</th><td className="py-2">{order.count}口（1口 {yen(pkg.price_yen)}）</td></tr>
+          <tr><th className="text-left text-muted py-2 font-normal">送料</th><td className="py-2 tnum">{order.shipping_yen ? yen(order.shipping_yen) : "無料"}</td></tr>
           <tr><th className="text-left text-muted py-2 font-normal">お支払い金額</th><td className="py-2 text-xl font-black text-accent-2 tnum">{yen(order.amount_yen)}</td></tr>
           <tr><th className="text-left text-muted py-2 font-normal">注文番号</th><td className="py-2 tnum font-bold">{orderNo}</td></tr>
           <tr><th className="text-left text-muted py-2 font-normal">注文日時</th><td className="py-2">{formatDateTime(order.created_at)}</td></tr>

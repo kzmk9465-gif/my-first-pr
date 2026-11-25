@@ -1,6 +1,8 @@
 import { randomBytes, randomInt } from "node:crypto";
 import { getDb, nowIso } from "./db.ts";
 import { notifyUser } from "./notify.ts";
+import { shippingFor } from "./oripa-shipping.ts";
+export { SHIPPING_YEN, FREE_SHIPPING_COUNT, shippingFor } from "./oripa-shipping.ts";
 
 /**
  * 播州くじ（オンラインくじ）確定版（2026-11-25 設計）。
@@ -59,6 +61,7 @@ export type OripaOrder = {
   package_id: number;
   count: number;
   amount_yen: number;
+  shipping_yen: number;
   provider: "bank" | "mock" | "psp";
   status: "pending" | "paid" | "cancelled" | "expired";
   drawn: number;
@@ -178,17 +181,19 @@ export function createOrder(
   if (!Number.isInteger(count) || count < 1 || count > MAX_COUNT_PER_ORDER) return { ok: false, error: `1回に買える口数は1〜${MAX_COUNT_PER_ORDER}口です。` };
   const db = getDb();
   const token = genToken();
+  const shipping = shippingFor(count);
+  const amount = pkg.price_yen * count + shipping;
   db.exec("BEGIN IMMEDIATE");
   try {
     expirePending(db);
     const sold = (db.prepare("SELECT COALESCE(SUM(count),0) AS n FROM oripa_orders WHERE package_id = ? AND status IN ('paid','pending')").get(pkg.id) as { n: number }).n;
     const left = pkg.total - sold;
     if (left < count) { db.exec("ROLLBACK"); return { ok: false, error: left <= 0 ? "完売しました。" : `残り ${left} 口です。` }; }
-    db.prepare("INSERT INTO oripa_orders (token, user_id, package_id, count, amount_yen, provider, status) VALUES (?, ?, ?, ?, ?, ?, 'pending')")
-      .run(token, user.id, pkg.id, count, pkg.price_yen * count, provider);
+    db.prepare("INSERT INTO oripa_orders (token, user_id, package_id, count, amount_yen, shipping_yen, provider, status) VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')")
+      .run(token, user.id, pkg.id, count, amount, shipping, provider);
     db.exec("COMMIT");
   } catch (e) { db.exec("ROLLBACK"); throw e; }
-  return { ok: true, token, amount: pkg.price_yen * count };
+  return { ok: true, token, amount };
 }
 
 export function getOrder(token: string): OripaOrder | null {
