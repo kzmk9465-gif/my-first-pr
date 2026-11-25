@@ -21,3 +21,54 @@ services:
         value: "false"
       - key: AUCTION_NAME
         value: 播州オク
+
+  # ---- 本番(販売用)。有料プラン+永続ディスク。デモとは別のサービス・別のDB ----
+  # Blueprint の同期時に sync: false の項目は Render の画面で値を求められる(鍵と個人情報は画面で貼る)。
+  - type: web
+    name: banshu-oku
+    runtime: docker
+    repo: https://github.com/kzmk9465-gif/my-first-pr
+    branch: main
+    dockerfilePath: ./Dockerfile
+    plan: starter
+    region: singapore
+    healthCheckPath: /api/health
+    disk:
+      name: banshu-data
+      mountPath: /data
+      sizeGB: 1
+    envVars:
+      - key: BASE_URL
+        value: https://banshu-oku.onrender.com
+      - key: AUCTION_NAME
+        value: 播州オク
+      - key: SITE_NAME
+        value: 播州めだか
+      - key: REQUIRE_APPROVAL      # くじは入金確認が関所なので会員承認は省略(あとで true に戻せる)
+        value: "false"
+      - key: OTP_SALT
+        generateValue: true
+      - key: ADMIN_EMAILS          # 管理者のメール(画面で入力)
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        value: "587"
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: MAIL_FROM
+        sync: false
+      - key: PAYMENT_BANK_INFO     # 振込先(画面で入力)
+        sync: false
+      - key: LEGAL_BUSINESS_NAME
+        sync: false
+      - key: LEGAL_REPRESENTATIVE
+        sync: false
+      - key: LEGAL_ADDRESS
+        sync: false
+      - key: LEGAL_PHONE
+        sync: false
+      - key: LEGAL_EMAIL
+        sync: false

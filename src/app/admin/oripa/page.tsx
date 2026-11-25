@@ -116,7 +116,8 @@ export default async function AdminOripaPage({ searchParams }: { searchParams: P
               <input name="ref_price" type="number" min={0} step={100} className="input" placeholder="参考価格（円）" />
               <input name="count" type="number" min={1} required className="input" placeholder="本数" />
               <button className="btn">賞を追加</button>
-              <input name="image_url" className="input md:col-span-7" placeholder="画像URL（任意・本番では実物写真を必ず）" />
+              <label className="md:col-span-4 flex items-center gap-2 text-xs text-muted">実物写真（JPEG/PNG/WebP・8MBまで。本番では必ず添付）<input name="image" type="file" accept="image/jpeg,image/png,image/webp" className="input" /></label>
+              <input name="image_url" className="input md:col-span-3" placeholder="または画像URL（任意）" />
             </form>
           </section>
         );

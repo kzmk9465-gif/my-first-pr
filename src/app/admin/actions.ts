@@ -260,7 +260,16 @@ export async function addOripaPrizeAction(formData: FormData): Promise<void> {
   if (!getPackageById(pkgId) || !name || !["S", "A", "B", "C"].includes(rarity) || !["medaka", "goods", "card"].includes(kind) || !Number.isInteger(count) || count < 1) {
     redirect(`/admin/oripa?error=${encodeURIComponent("賞品名・賞・種類・本数を正しく入力してください。")}`);
   }
-  addPrize(pkgId, { rarity: rarity as "S" | "A" | "B" | "C", name, kind: kind as "medaka" | "goods" | "card", ref_price: Number(str(formData, "ref_price")) || 0, image_url: str(formData, "image_url", 300) || null, count });
+  // 実物写真: ファイルが添付されていれば保存(EXIF除去・WebP化)。無ければ画像URL欄を使う
+  let imageUrl: string | null = str(formData, "image_url", 300) || null;
+  const f = formData.get("image");
+  if (f instanceof File && f.size > 0) {
+    const { saveImage } = await import("@/lib/uploads");
+    const r = await saveImage(f);
+    if (!r.ok) redirect(`/admin/oripa?error=${encodeURIComponent(r.error)}`);
+    imageUrl = r.url;
+  }
+  addPrize(pkgId, { rarity: rarity as "S" | "A" | "B" | "C", name, kind: kind as "medaka" | "goods" | "card", ref_price: Number(str(formData, "ref_price")) || 0, image_url: imageUrl, count });
   revalidatePath("/oripa");
   redirect("/admin/oripa?saved=1");
 }
