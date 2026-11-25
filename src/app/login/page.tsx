@@ -30,7 +30,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           </p>
           {sp.debug && (
             <p className="text-xs text-ok border border-ok/40 rounded p-2">
-              開発モード：メール送信が未設定のため認証コードを表示しています → <b className="text-base tracking-widest">{sp.debug}</b>
+              お試し環境：メール送信が未設定のため、ここに認証コードを表示しています → <b className="text-base tracking-widest">{sp.debug}</b><br />この数字をそのまま下の欄に入力してください。
             </p>
           )}
           <input name="code" inputMode="numeric" pattern="[0-9]{6}" maxLength={6} placeholder="123456" required autoFocus className="input text-center text-2xl tracking-[0.5em]" />

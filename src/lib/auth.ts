@@ -46,7 +46,8 @@ export async function requestOtp(emailRaw: string): Promise<{ debugCode?: string
   // LINE連携済みなら LINE にも届ける（メールを開く手間を省く）
   const linked = db.prepare("SELECT line_user_id FROM users WHERE email = ? AND line_user_id IS NOT NULL").get(email) as { line_user_id: string } | undefined;
   if (linked) await pushLine(linked.line_user_id, `【${siteConfig.auctionName}】ログイン認証コード: ${code}（${OTP_MINUTES}分有効）`).catch(() => {});
-  const showDebug = mailProvider() === "console" && process.env.NODE_ENV !== "production";
+  // メール未設定なら画面にコードを表示。公開デモ（DEMO_MODE）では本番でも表示する。
+  const showDebug = process.env.DEMO_MODE === "1" || (mailProvider() === "console" && process.env.NODE_ENV !== "production");
   return showDebug ? { debugCode: code } : {};
 }
 

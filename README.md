@@ -3,6 +3,25 @@
 播州めだか向けの会員制メダカオークション（Webアプリ）です。
 Next.js 15（App Router）+ TypeScript + Tailwind CSS + SQLite（Node.js 内蔵 `node:sqlite`）で構成し、外部サービスなしで動作します。
 
+## 公開して開く（ワンクリック・デプロイ）
+
+スマホ・PCのブラウザから「リンクをタップするだけ」で開けるお試し環境を作れます。
+
+[![Deploy to Render](https://render.com/images/deploy-to-render-button.svg)](https://render.com/deploy?repo=https://github.com/kzmk9465-gif/my-first-pr)
+
+1. 上のボタンを押す → Render（無料ホスティング）に GitHub でサインイン
+2. 画面の案内どおり「Apply / Create」を押す（`render.yaml` が自動で読み込まれます）
+3. 数分のビルド後、`https://banshu-oku-demo.onrender.com` のような公開URLができます
+
+このお試し環境では次が自動で有効になります（`render.yaml` で設定）：
+
+- **起動時にデモ出品を自動投入**（`SEED_ON_START=1`）
+- **ログイン認証コードを画面に表示**（`DEMO_MODE=1`、メール設定不要でそのままログイン可）
+- **会員承認を省略**（`REQUIRE_APPROVAL=false`、登録後すぐ入札・くじを試せる）
+
+> 無料プランはしばらくアクセスが無いとスリープし、次回アクセス時に起動に数十秒かかります。
+> 本番運用では、永続ディスク付きのプランと、SMTP・独自ドメイン等の設定を推奨します（下記「デプロイ」参照）。
+
 ## 機能
 
 | 機能 | 内容 |
