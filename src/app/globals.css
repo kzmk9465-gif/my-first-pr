@@ -1,0 +1,161 @@
+@import "tailwindcss";
+
+:root {
+  /* カラーパレット「水鏡・月白」(Gemini提案) 発光シアン×プレステージブルー×ネオンローズ */
+  --background: #080C14;     /* 水底の深藍黒 */
+  --bg-2: #0F172A;           /* 水面に月明かり（藍鉄） */
+  --surface: #182234;        /* 出品カード面（深水色） */
+  --surface-2: #101726;      /* 詳細表・入札履歴・枠 */
+  --foreground: #F8FAFC;     /* クリスタルホワイト */
+  --muted: #94A3B8;          /* 補助テキスト */
+  --accent: #00F0FF;         /* 主役：ルミナスシアン（価格・主ボタン） */
+  --accent-2: #7DF9FF;       /* アイシーな輝き（最高額・見出し・ホバー） */
+  --accent-deep: #0284C7;    /* 水深のディープブルー（影・枠） */
+  --seal: #0284C7;           /* 印章の縁（水深ブルー） */
+  --urgent: #FF3875;         /* ネオンローズ（ラストコール） */
+  --danger: #FB7185;         /* エラー */
+  --ok: #60A5FA;             /* プレステージブルー（認証・安心） */
+  --line: #06c755;           /* LINE */
+  --hair: rgba(125, 249, 255, 0.2);  /* 白藍の細線 */
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-foreground: var(--foreground);
+  --color-muted: var(--muted);
+  --color-accent: var(--accent);
+  --color-accent-2: var(--accent-2);
+  --color-accent-deep: var(--accent-deep);
+  --color-seal: var(--seal);
+  --color-urgent: var(--urgent);
+  --color-danger: var(--danger);
+  --color-ok: var(--ok);
+  --color-line: var(--line);
+}
+
+html { color-scheme: dark; }
+
+body {
+  min-height: 100vh;
+  color: var(--foreground);
+  font-family: "Hiragino Mincho ProN", "Yu Mincho", "YuMincho", "Noto Serif JP", "Shippori Mincho", serif;
+  /* 奥行きのある背景：上に金のほのかな光、全体に藍墨のグラデーション */
+  background:
+    radial-gradient(1200px 520px at 50% -140px, rgba(0,240,255,0.10), transparent 60%),
+    radial-gradient(900px 600px at 85% 8%, rgba(60,86,170,0.10), transparent 55%),
+    linear-gradient(180deg, var(--bg-2) 0%, var(--background) 42%, var(--background) 100%);
+  background-attachment: fixed;
+}
+/* 和紙のような極薄のテクスチャ（麻の葉を思わせる細かな斜線） */
+body::before {
+  content: "";
+  position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background-image:
+    repeating-linear-gradient(45deg, rgba(255,255,255,0.018) 0 1px, transparent 1px 22px),
+    repeating-linear-gradient(-45deg, rgba(255,255,255,0.015) 0 1px, transparent 1px 22px);
+  opacity: 0.5;
+}
+
+::selection { background: rgba(125,249,255,0.3); color: #fff; }
+
+/* スクロールバー */
+* { scrollbar-width: thin; scrollbar-color: var(--accent-deep) transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb { background: var(--accent-deep); border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
+
+/* ---- 見出し・装飾 ---- */
+.text-accent-2 { letter-spacing: 0.01em; }
+/* 金の細い区切り線 */
+.hairline { height: 1px; background: linear-gradient(90deg, transparent, var(--hair) 20%, var(--hair) 80%, transparent); }
+
+/* ---- カード ---- */
+.card {
+  position: relative;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.015), transparent 40%),
+    linear-gradient(180deg, var(--surface), #0f1626);
+  border: 1px solid rgba(255,255,255,0.10);
+  border-radius: 0.85rem;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5), 0 1px 0 rgba(255,255,255,0.04) inset;
+}
+
+/* ---- ボタン ---- */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: .4rem;
+  padding: .58rem 1.1rem; border-radius: .55rem; font-weight: 800; letter-spacing: .02em;
+  color: #080C14;
+  background: linear-gradient(180deg, var(--accent-2), var(--accent) 55%, #0284C7);
+  box-shadow: 0 0 15px rgba(0,240,255,0.3), 0 1px 0 rgba(255,255,255,0.45) inset;
+  transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+}
+.btn:hover { filter: brightness(1.06); transform: translateY(-1px); box-shadow: 0 0 22px rgba(0,240,255,0.5), 0 1px 0 rgba(255,255,255,0.5) inset; }
+.btn:active { transform: translateY(0); }
+.btn:disabled { opacity: .45; cursor: not-allowed; filter: grayscale(.3); transform: none; box-shadow: none; }
+.btn-outline {
+  background: transparent; color: var(--accent-2); border: 1px solid var(--accent);
+  box-shadow: none;
+}
+.btn-outline:hover { background: rgba(0,240,255,0.1); }
+.btn-line { background: var(--line); color: #fff; box-shadow: 0 8px 18px -10px rgba(6,199,85,0.6); }
+.btn-line:hover { filter: brightness(1.05); }
+
+/* ---- 入力 ---- */
+.input {
+  width: 100%; padding: .58rem .8rem; border-radius: .55rem;
+  background: #0b1122; border: 1px solid rgba(255,255,255,.1); color: var(--foreground);
+  transition: border-color .12s, box-shadow .12s;
+}
+.input::placeholder { color: #697089; }
+.input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,240,255,0.22); }
+
+/* ---- バッジ ---- */
+.badge {
+  display: inline-block; padding: .12rem .55rem; border-radius: 999px; font-size: .72rem; line-height: 1.5;
+  border: 1px solid rgba(255,255,255,.16); color: var(--muted); background: rgba(255,255,255,0.02);
+}
+.badge-ok { color: #7cb0ff; border-color: rgba(96,165,250,.22); background: rgba(96,165,250,0.10); }
+.badge-hot { color: #ff6f9c; border-color: rgba(255,56,117,.5); background: rgba(255,56,117,0.08); }
+.badge-star { color: #042430; border-color: transparent; background: linear-gradient(180deg, var(--accent-2), var(--accent)); font-weight: 700; }
+
+/* 緊急（終了間際・残りわずか）。暖色の朱橙で行動を促す。使いすぎ注意（全体の1割未満） */
+.text-urgent { color: var(--urgent); }
+.badge-urgent { color: #fff; border-color: transparent; background: linear-gradient(180deg, #f0693f, var(--urgent)); font-weight: 700; }
+/* 価格の焦点：黄金比で見出しより大きく、ほのかに発光 */
+.price-focus { color: var(--accent-2); font-weight: 800; letter-spacing: .01em; text-shadow: 0 0 18px rgba(125,249,255,0.3);
+  font-family: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", "Noto Sans Mono", monospace; font-variant-numeric: tabular-nums; }
+.tnum { font-family: ui-monospace, "SFMono-Regular", "Menlo", "Consolas", "Noto Sans Mono", monospace; font-variant-numeric: tabular-nums; }
+
+/* ---- タブ ---- */
+.tab { padding: .55rem 1.1rem; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 700; transition: color .12s; }
+.tab:hover { color: var(--foreground); }
+.tab-active { color: var(--accent-2); border-bottom-color: var(--accent); text-shadow: 0 0 18px rgba(125,249,255,0.4); }
+
+/* ---- 播州くじ（オリパ）演出 ---- */
+/* レアリティ配色トークン */
+.rank-S { --rk:#FFE08A; --rk2:#FF6FB0; --rk3:#7DF9FF; }
+.rank-A { --rk:#FFD36E; --rk2:#FFB347; --rk3:#FFE08A; }
+.rank-B { --rk:#7DF9FF; --rk2:#00F0FF; --rk3:#0284C7; }
+.rank-C { --rk:#94A3B8; --rk2:#64748B; --rk3:#475569; }
+
+@keyframes oripa-float { 0%,100%{ transform:translateY(-6px) } 50%{ transform:translateY(6px) } }
+@keyframes oripa-pulse { 0%,100%{ opacity:.55; transform:scale(1) } 50%{ opacity:1; transform:scale(1.06) } }
+@keyframes oripa-ripple { 0%{ transform:scale(.2); opacity:.9 } 100%{ transform:scale(2.6); opacity:0 } }
+@keyframes oripa-rise { 0%{ transform:translateY(40px) scale(.6); opacity:0 } 60%{ opacity:1 } 100%{ transform:translateY(-10px) scale(1.15); opacity:0 } }
+@keyframes oripa-hue { 0%{ filter:hue-rotate(0deg) } 100%{ filter:hue-rotate(360deg) } }
+@keyframes oripa-reveal { 0%{ transform:perspective(900px) rotateY(90deg) scale(.85); opacity:0 } 60%{ opacity:1 } 100%{ transform:perspective(900px) rotateY(0) scale(1); opacity:1 } }
+@keyframes oripa-splash { 0%{ transform:scale(0); opacity:.9 } 100%{ transform:scale(1.8); opacity:0 } }
+@keyframes oripa-sheen { 0%{ transform:translateX(-120%) } 100%{ transform:translateX(220%) } }
+@keyframes oripa-in { 0%{ opacity:0; transform:translateY(8px) } 100%{ opacity:1; transform:translateY(0) } }
+
+.anim-float { animation:oripa-float 3.2s ease-in-out infinite; }
+.anim-pulse { animation:oripa-pulse 2.2s ease-in-out infinite; }
+.anim-rise { animation:oripa-rise 1.5s ease-out forwards; }
+.anim-hue { animation:oripa-hue 2.4s linear infinite; }
+.anim-reveal { animation:oripa-reveal .7s cubic-bezier(.2,.8,.2,1) both; }
+.anim-in { animation:oripa-in .4s ease-out both; }
+
+@media (prefers-reduced-motion: reduce) {
+  .anim-float,.anim-pulse,.anim-rise,.anim-hue,.anim-reveal,.anim-in { animation-duration:.01ms !important; animation-iteration-count:1 !important; }
+}

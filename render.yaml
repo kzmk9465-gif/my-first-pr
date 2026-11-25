@@ -1,0 +1,23 @@
+# Render.com 用ワンクリック・デプロイ設定（Blueprint）。
+# 「Deploy to Render」ボタンから、この設定どおりの公開デモが作られます。
+# 公開先は Dockerfile（Node 22 / standalone）でビルドされ、
+# お試し用に「起動時のデモデータ投入」「画面での認証コード表示」「会員承認オフ」を有効にします。
+services:
+  - type: web
+    name: banshu-oku-demo
+    runtime: docker
+    repo: https://github.com/kzmk9465-gif/my-first-pr
+    branch: main
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: singapore
+    healthCheckPath: /api/health
+    envVars:
+      - key: DEMO_MODE          # ログイン認証コードを画面に表示（メール不要でお試し可）
+        value: "1"
+      - key: SEED_ON_START      # 起動時に出品が空ならデモ出品を投入
+        value: "1"
+      - key: REQUIRE_APPROVAL   # 会員承認を省略（登録後すぐ入札・くじを試せる）
+        value: "false"
+      - key: AUCTION_NAME
+        value: 播州オク
