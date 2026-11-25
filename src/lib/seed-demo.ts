@@ -3,7 +3,7 @@ import { getDb } from "./db.ts";
 /**
  * デモデータ（出品者・出品）を投入する。
  * 既に出品があれば何もしない（force=true で追加）。投入した出品数を返す。
- * scripts/seed.ts（手動投入）と instrumentation.ts（公開デモの起動時投入）の両方から使う。
+ * scripts/seed.ts（手動投入）と src/instrumentation.ts（公開デモの起動時投入）の両方から使う。
  */
 export function seedDemo(force = false): number {
   const db = getDb();
