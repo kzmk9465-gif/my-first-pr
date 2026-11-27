@@ -1,12 +1,12 @@
-<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>播州くじ 演出の配線 デモ確認手順(アテナさん向け)</title>
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>播州くじ 演出の配線 — デモ確認手順</title>
 <style>body{margin:0;padding:20px max(16px,env(safe-area-inset-right)) 40px max(16px,env(safe-area-inset-left));font:15px/1.7 -apple-system,"Hiragino Sans","Yu Gothic",sans-serif;color:#1d2330;background:#fbfaf6;max-width:860px;margin-inline:auto}
 h1{font-size:22px;border-bottom:2px solid #c9a84a;padding-bottom:6px}h2{font-size:18px;margin-top:28px;border-left:5px solid #c9a84a;padding-left:10px}h3{font-size:16px}
 table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0;display:block;overflow-x:auto}th,td{border:1px solid #d9d4c5;padding:6px 8px;text-align:left;vertical-align:top}th{background:#f1ead6}
 code{background:#eee9db;padding:1px 5px;border-radius:3px;font-size:13px}a{color:#8a5a14;word-break:break-all}blockquote{border-left:4px solid #ddd;margin:8px 0;padding:4px 12px;color:#555}li{margin:3px 0}
 .foot{margin-top:36px;font-size:12px;color:#777}</style></head><body>
 <h1>播州くじ 演出の配線 — デモ(Render)での確認手順(2026-11-27 ゴッド)</h1>
-<h2>★最新の状態(2026-11-27 15:25 時点・これが正)</h2>
-<p><strong>15:25 社長指示で、公開中の演出(/gacha/ と非公開ページ)を Codex 原本 v49 に戻した。15:45 社長「虹色メダカと派手な音がズレてる」→原本に虹色の時刻だけ直した v49b(虹色を10.0秒→8.8秒・3ファイルのみ・README_v49b.md)を公開。</strong> 以下の v50 の確認結果は、v50 の dist を公開に戻したときに再び有効になる。v49 には本番モード(?draw=記録ID)が無いので、播州オクの「演出を見る」リンクは v49 のデモ画面を開くだけ。</p>
+<h2>★最新の状態(2026-11-27 15:55 時点・これが正)</h2>
+<p><strong>15:55 社長「v50に差し替えて」+アテナさんの指摘(虹色メダカが出る前に音のクライマックスが鳴る)→ 公開中の演出(/gacha/ と非公開ページ)を v50(?v=65)に戻した。溜めの音は残し、音源は遅らせず、映像側の解放(光の炸裂+虹色メダカの登場)を音の一撃=亀裂の開始から7.9秒に合わせた。3テーマ実測: 虹色の開始 炎7.90／龍7.86／祝福7.86秒、音の一撃の立ち上がり7.6〜7.9秒・ピーク7.9〜8.1秒。</strong> 本番モード(?draw=記録ID)は再び有効。残り=耳での確認(iPhone)。それまでの経緯: 15:25 社長指示で v49(Codex原本)へ、15:45 v49b(虹色の時刻だけ8.8秒)を公開していた。</p>
 <p><strong>確認済み(ゴッドが実測)</strong></p>
 <ul>
 <li>本人確認: 当選記録APIは本人の記録だけ(他人の記録=404、未ログイン=401)。ローカルとデモ(Render)の両方で、テスト会員A/Bの双方向で実測。</li>
@@ -39,6 +39,9 @@ code{background:#eee9db;padding:1px 5px;border-radius:3px;font-size:13px}a{color
 </ul>
 <ul>
 <li>虹色の時刻(15:10 追記): 社長「ピュピピピピーンが少し早い」→音源の高い立ち上がり(8.9〜9.45秒)に合わせて虹色メダカの登場を8.8秒に前倒し(?v=64)。調整は rainbowAt 1か所。</li>
+</ul>
+<ul>
+<li>解放の時刻(15:55 追記): 社長「v50に差し替えて」+アテナさん「虹色メダカの前に音のクライマックス」→虹色メダカ(光の炸裂)を音の一撃7.9秒に合わせ、崩壊の前触れは7.2秒から(?v=65)。3テーマ実測で一致。</li>
 </ul>
 <p><strong>今後の更新</strong>: 機能追加は止めている。iPhone確認で出た指摘のみ対応する。</p>
 <p>---</p>
