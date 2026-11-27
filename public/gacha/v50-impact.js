@@ -6,7 +6,9 @@
  'use strict';
  window.V50 = {
   /* フリーズ後の長さ(秒)。降臨の音(参考音源 descent-reference.mp3・12.6秒: 0-5.2秒 緊張 / 5.2-7.5秒 静寂 / 7.5秒〜 最高潮 / 11.8秒 解放)に合わせる */
-  freezeDurations: { fire: [5.25, 7], dragon: [4.25, 8], blessing: [5.25, 7] },
+  freezeDurations: { fire: [4, 6], dragon: [3, 7], blessing: [5, 5] },
+  /* 参考音源の構造(秒・音の頭から): 0-5.2 緊張 / 5.2-7.5 静寂 / 7.5-12.6 最高潮(12.6で終わり=虹色の終わり) */
+  bed: { lull: [5.2, 7.5], length: 12.6 },
   /* 高域シェルフ(2.6kHz〜)のブースト量 dB。重低音偏重の緩和 */
   airDb: 5,
  };
@@ -115,17 +117,17 @@
   },
   /* フリーズ後の上昇(riser)。テーマごとに音色が違う。rift+gather の全長で一気に昇りつめる */
   riser(theme, riftDur, gatherDur) {
-   if (!this.ok()) return; const ac = this.ac, t0 = ac.currentTime, total = riftDur + gatherDur, out = this.out();
+   if (!this.ok()) return; const ac = this.ac, t0 = ac.currentTime, total = V50.bed.length, out = this.out(), L0 = V50.bed.lull[0], L1 = V50.bed.lull[1];
    /* 共通: 帯域が上がっていくノイズの風(300Hz→9kHz)。静寂(参考音源の 5.2-7.5秒)では一度沈む */
    const n = ac.createBufferSource(), nf = ac.createBiquadFilter(), ng = ac.createGain();
    n.buffer = this.noise(); n.loop = true; nf.type = 'bandpass'; nf.Q.value = 1.6;
-   nf.frequency.setValueAtTime(300, t0); nf.frequency.exponentialRampToValueAtTime(1400, t0 + riftDur); nf.frequency.setValueAtTime(900, t0 + riftDur + 2.2); nf.frequency.exponentialRampToValueAtTime(9000, t0 + total);
-   ng.gain.value = 0; ng.gain.setValueAtTime(0, t0); ng.gain.linearRampToValueAtTime(.08, t0 + riftDur); ng.gain.linearRampToValueAtTime(.02, t0 + riftDur + 2.2); ng.gain.linearRampToValueAtTime(.2, t0 + total - .3); ng.gain.linearRampToValueAtTime(0, t0 + total + .2);
+   nf.frequency.setValueAtTime(300, t0); nf.frequency.exponentialRampToValueAtTime(1400, t0 + L0); nf.frequency.setValueAtTime(900, t0 + L1); nf.frequency.exponentialRampToValueAtTime(9000, t0 + total);
+   ng.gain.value = 0; ng.gain.setValueAtTime(0, t0); ng.gain.linearRampToValueAtTime(.08, t0 + L0); ng.gain.linearRampToValueAtTime(.02, t0 + L1); ng.gain.linearRampToValueAtTime(.2, t0 + total - .3); ng.gain.linearRampToValueAtTime(0, t0 + total + .2);
    n.connect(nf); nf.connect(ng); ng.connect(out); n.start(t0); n.stop(t0 + total + .3); this.bus().track(n);
    /* 鼓動: 間隔が縮む(1.1秒→0.18秒)。高いクリックを乗せて重低音だけにしない */
    let at = t0 + .4;
    while (at < t0 + total - .25) {
-    const p = (at - t0) / total, lull = at > t0 + riftDur && at < t0 + riftDur + 2.2;
+    const p = (at - t0) / total, lull = at > t0 + L0 && at < t0 + L1;
     if (!lull) { this.tone(at, .22, .12 + p * .08, { from: 62 + p * 30, to: 38 }, 'sine'); this.burst(at, .03, .1 + p * .1, { type: 'highpass', from: 6000, q: .5 }); }
     at += Math.max(.18, 1.1 - p * 1.0);
    }
@@ -134,28 +136,28 @@
     const o = ac.createOscillator(), g = ac.createGain(), f = ac.createBiquadFilter();
     o.type = 'sawtooth'; o.frequency.setValueAtTime(55, t0); o.frequency.exponentialRampToValueAtTime(220, t0 + total);
     f.type = 'lowpass'; f.frequency.setValueAtTime(400, t0); f.frequency.exponentialRampToValueAtTime(5200, t0 + total); f.Q.value = 4;
-    g.gain.value = 0; g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.1, t0 + riftDur); g.gain.linearRampToValueAtTime(.035, t0 + riftDur + 2.2); g.gain.linearRampToValueAtTime(.16, t0 + total - .2); g.gain.linearRampToValueAtTime(0, t0 + total + .1);
+    g.gain.value = 0; g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.1, t0 + L0); g.gain.linearRampToValueAtTime(.035, t0 + L1); g.gain.linearRampToValueAtTime(.16, t0 + total - .2); g.gain.linearRampToValueAtTime(0, t0 + total + .1);
     o.connect(this.shaper()); this.shaper().connect(f); f.connect(g); g.connect(out); o.start(t0); o.stop(t0 + total + .2); this.bus().track(o);
     /* 爆ぜる火の粉(ランダムな高いパチパチ) */
-    for (let s = t0 + riftDur + 2.2; s < t0 + total; s += .05 + Math.random() * .25 * (1 - (s - t0) / total)) this.burst(s, .025, .07 + ((s - t0) / total) * .1, { type: 'bandpass', from: 3000 + Math.random() * 5000, q: 3 });
+    for (let s = t0 + L1; s < t0 + total; s += .05 + Math.random() * .25 * (1 - (s - t0) / total)) this.burst(s, .025, .07 + ((s - t0) / total) * .1, { type: 'bandpass', from: 3000 + Math.random() * 5000, q: 3 });
    } else if (theme === 'dragon') {
     /* 龍: 深い龍鳴り(サブ)+ 水の高いきらめき + 雷の遠鳴り */
     const o = ac.createOscillator(), g = ac.createGain();
     o.type = 'sine'; o.frequency.setValueAtTime(44, t0); o.frequency.exponentialRampToValueAtTime(66, t0 + total);
-    g.gain.value = 0; g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.14, t0 + riftDur); g.gain.linearRampToValueAtTime(.05, t0 + riftDur + 2.2); g.gain.linearRampToValueAtTime(.18, t0 + total - .3); g.gain.linearRampToValueAtTime(0, t0 + total + .1);
+    g.gain.value = 0; g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.14, t0 + L0); g.gain.linearRampToValueAtTime(.05, t0 + L1); g.gain.linearRampToValueAtTime(.18, t0 + total - .3); g.gain.linearRampToValueAtTime(0, t0 + total + .1);
     o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + total + .2); this.bus().track(o);
     for (let s = t0 + .3; s < t0 + total; s += .22 - ((s - t0) / total) * .15) { const p = (s - t0) / total; this.tone(s, .5, .05 + p * .06, { from: 2200 + Math.random() * 2600, to: 3200 + p * 3000 }, 'sine'); }
    } else {
     /* 祝福: 鐘の分散和音(ペンタトニック)が速くなり高く昇る + 金粉のシマー */
     const scale = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.7, 1318.5, 1568, 1760, 2093, 2349, 2637];
     let k = 0, s = t0 + .35;
-    while (s < t0 + total - .2) { const p = (s - t0) / total, lull = s > t0 + riftDur && s < t0 + riftDur + 2.2; const f = scale[Math.min(scale.length - 1, Math.floor(p * scale.length) + (k % 3))];
+    while (s < t0 + total - .2) { const p = (s - t0) / total, lull = s > t0 + L0 && s < t0 + L1; const f = scale[Math.min(scale.length - 1, Math.floor(p * scale.length) + (k % 3))];
      if (!lull) { this.tone(s, .8, .05 + p * .035, { from: f }, 'sine'); this.tone(s, .4, .025 + p * .02, { from: f * 2.01 }, 'triangle'); }
      k++; s += Math.max(.11, .5 - p * .4); }
     const sh = ac.createBufferSource(), sf = ac.createBiquadFilter(), sg = ac.createGain();
     sh.buffer = this.noise(); sh.loop = true; sf.type = 'highpass'; sf.frequency.value = 7000; sg.gain.value = 0;
-    sg.gain.setValueAtTime(0, t0 + riftDur + 2.2); sg.gain.linearRampToValueAtTime(.09, t0 + total - .3); sg.gain.linearRampToValueAtTime(0, t0 + total + .1);
-    sh.connect(sf); sf.connect(sg); sg.connect(out); sh.start(t0 + riftDur + 2); sh.stop(t0 + total + .2); this.bus().track(sh);
+    sg.gain.setValueAtTime(0, t0 + L1); sg.gain.linearRampToValueAtTime(.09, t0 + total - .3); sg.gain.linearRampToValueAtTime(0, t0 + total + .1);
+    sh.connect(sf); sf.connect(sg); sg.connect(out); sh.start(t0 + L1 - .2); sh.stop(t0 + total + .2); this.bus().track(sh);
    }
   },
   /* 解放の一撃: 全帯域の炸裂 + 落ちる低音 + 明るい高音の和音 */
