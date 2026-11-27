@@ -23,7 +23,7 @@ export default async function OripaPage({ searchParams }: { searchParams: Promis
 
   const packages: PkgLite[] = views.map((p) => ({
     id: p.id, slug: p.slug, name: p.name, subtitle: p.subtitle, price_yen: p.price_yen, total: p.total, hue1: p.hue1, hue2: p.hue2,
-    prizes: p.prizes.map((x) => ({ id: x.id, rarity: x.rarity, name: x.name, kind: x.kind, ref_price: x.ref_price, count_total: x.count_total, count_left: x.count_left })),
+    prizes: p.prizes.map((x) => ({ id: x.id, rarity: x.rarity, name: x.name, kind: x.kind, ref_price: x.ref_price, count_total: x.count_total })),
   }));
 
   return (
@@ -100,7 +100,7 @@ export default async function OripaPage({ searchParams }: { searchParams: Promis
           <li>当選品は<strong className="text-foreground">発送依頼</strong>をすると、お店から発送します（生体は天候と状態を見て原則7日以内）。</li>
         </ol>
         <ul className="text-[11px] text-muted mt-3 space-y-0.5 list-disc pl-5">
-          <li>各くじは総口数と各賞の本数が先に決まっていて、引かれた分だけ減ります。残本数は常に表示します。</li>
+          <li>各くじは総口数と各賞の本数が先に決まっていて、引かれた分だけ減ります。残り口数は常に表示します（賞ごとの残本数は表示しません）。</li>
           <li>全口が賞品付きです。当選品のポイント化・買い取り・他の商品との交換はできません。</li>
           <li>18歳未満の方はご購入いただけません。購入後の返金はできません。</li>
           <li>送料は1回の注文につき{yen(SHIPPING_YEN)}（{FREE_SHIPPING_COUNT}口以上で無料）。口の代金と合わせて1回でお支払いいただきます。</li>

@@ -7,7 +7,7 @@ import { buyOripaAction, drawOripaAction, shipOripaAction } from "@/app/oripa/ac
 import type { DrawResult, Rarity } from "@/lib/oripa";
 import { FREE_SHIPPING_COUNT, SHIPPING_YEN, shippingFor } from "@/lib/oripa-shipping";
 
-export type PrizeLite = { id: number; rarity: Rarity; name: string; kind: string; ref_price: number; ref_note?: string; count_total: number; count_left: number };
+export type PrizeLite = { id: number; rarity: Rarity; name: string; kind: string; ref_price: number; ref_note?: string; count_total: number };
 export type PkgLite = {
   id: number; slug: string; name: string; subtitle: string; price_yen: number; total: number;
   hue1: string; hue2: string; prizes: PrizeLite[];
@@ -23,7 +23,7 @@ export default function OripaCard({ pkg, remaining: remaining0, sellable, logged
 }) {
   const [remaining, setRemaining] = useState(remaining0);
   const [orders, setOrders] = useState(orders0);
-  const [prizes, setPrizes] = useState(pkg.prizes);
+  const prizes = pkg.prizes; // 各賞の本数（箱全体）。賞ごとの残本数は画面に出さない（11/28 社長決定）
   const [results, setResults] = useState<DrawResult[] | null>(null);
   const [drawId, setDrawId] = useState(0);
   const [count, setCount] = useState(1);
@@ -34,7 +34,6 @@ export default function OripaCard({ pkg, remaining: remaining0, sellable, logged
   const c1 = pkg.hue1, c2 = pkg.hue2;
   const soldPct = pkg.total > 0 ? Math.round(((pkg.total - remaining) / pkg.total) * 100) : 100;
   const soldOut = remaining <= 0;
-  const prizeLeft = prizes.reduce((a, p) => a + p.count_left, 0);
 
   const runDraw = (token: string, n: number) => {
     setError(null);
@@ -43,8 +42,6 @@ export default function OripaCard({ pkg, remaining: remaining0, sellable, logged
       if (!r.ok) { setError(r.error); return; }
       setResults(r.results); setRemaining(r.remaining); setCount(n); setActive(token); setDrawId((d) => d + 1);
       setOrders((prev) => prev.map((o) => (o.token === token ? { ...o, left: r.left } : o)).filter((o) => o.left > 0));
-      // 各賞の残本数を画面側でも減らす
-      setPrizes((prev) => prev.map((p) => ({ ...p, count_left: p.count_left - r.results.filter((x) => x.name === p.name && x.rarity === p.rarity).length })));
     });
   };
 
@@ -98,19 +95,19 @@ export default function OripaCard({ pkg, remaining: remaining0, sellable, logged
             style={{ width: `${Math.min(100, Math.max(2, 100 - soldPct))}%`, background: `linear-gradient(90deg, ${c1}, ${c2})` }} />
         </div>
 
-        {/* 箱の中身（各賞の残本数＝確率の根拠） */}
+        {/* 箱の中身（各賞の本数＝箱全体の数。残本数は出さない） */}
         <table className="w-full text-[11px]">
           <tbody>
             {prizes.map((p) => (
               <tr key={p.id} className="border-t border-white/5">
                 <td className="py-1 pr-1 whitespace-nowrap font-bold" style={{ color: COLOR[p.rarity] }}>{LABEL[p.rarity]}</td>
                 <td className="py-1 pr-1">{p.name}<span className="text-muted"> ・参考 {yen(p.ref_price)}{p.ref_note ? `（${p.ref_note}）` : ""}</span></td>
-                <td className="py-1 text-right tnum whitespace-nowrap text-muted">残 {p.count_left}/{p.count_total}本</td>
+                <td className="py-1 text-right tnum whitespace-nowrap text-muted">{p.count_total}本</td>
               </tr>
             ))}
           </tbody>
         </table>
-        <p className="text-[10px] text-muted">当たる確率＝その賞の残本数 ÷ 残り口数（残 {prizeLeft} 本）。全口が賞品付き（はずれ無し）。当選品は発送でお届けします。</p>
+        <p className="text-[10px] text-muted">本数は箱全体（{pkg.total}口）に入っている数です。賞ごとの残本数は表示していません。全口が賞品付き（はずれ無し）。当選品は発送でお届けします。</p>
 
         {/* 引ける口（入金済み） */}
         {orders.length > 0 && (
