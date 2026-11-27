@@ -56,7 +56,7 @@
  if (V50.app) {
   document.documentElement.classList.add('v50-app');
   /* 再生する等級は画面の選択肢ではなく、サーバーの記録だけから決める(記録が無ければ再生しない) */
-  if (window.GachaRules && GachaRules.choose && !GachaRules._v50app) { const orig = GachaRules.choose; GachaRules.choose = (effect, rank, random) => { const rec = V50.record(); if (!rec) throw new Error('当選記録がありません'); /* SS専用の種類(プレミア/復活/フリーズ/予告)は記録がSSのときだけ */ const e = (rec.rank !== 'SS' && ['premium', 'revival', 'freeze', 'preview'].includes(effect)) ? 'auto' : effect; const out = orig(e, rec.rank, random); if (out.rank !== rec.rank) throw new Error('等級が記録と一致しません'); return out; }; GachaRules._v50app = true; }
+  if (window.GachaRules && GachaRules.choose && !GachaRules._v50app) { const orig = GachaRules.choose; GachaRules.choose = (effect, rank, random) => { const rec = V50.record(); if (!rec) throw new Error('当選記録がありません'); /* 種類は常に「おまかせ」: チャンス/プレミア等の下限(floor)で等級が記録より上がるのを防ぐ */ const out = orig('auto', rec.rank, random); if (out.rank !== rec.rank) throw new Error('等級が記録と一致しません'); return out; }; GachaRules._v50app = true; }
   const back = document.querySelector('#back'), exit = document.querySelector('#exit');
   if (back) { back.textContent = '景品を確認する →'; back.onclick = (e) => { e.preventDefault(); appPost('done'); }; }
   if (exit) { exit.textContent = '× 景品へ'; exit.onclick = (e) => { e.preventDefault(); appPost('done'); }; }
