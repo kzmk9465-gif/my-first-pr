@@ -1,0 +1,219 @@
+/* v50-impact.js — 迫力の追加層(音の同期・衝撃波・文字の衝撃・PUSHの鼓動・ランク別の祝福)
+   既存の reel.js / sword-reference.js は触らず、data-scene / data-phase の変化を見て動く。
+   音は既存の score(GachaScore)の出力バスに流すので、ミュート・スキップ(score.stop)で一緒に止まる。
+   AudioContext は新しく作らない(iPhone で鳴らなくなるため)。 */
+(() => {
+ 'use strict';
+ window.V50 = {
+  /* フリーズ後の長さ(秒)。降臨の音 original-descent.wav(12.6秒: 0-5.2秒 緊張 / 5.2-7.5秒 静寂 / 7.5秒〜 最高潮 / 11.8秒 解放)に合わせる */
+  freezeDurations: { fire: [5.25, 7], dragon: [4.25, 8], blessing: [5.25, 7] },
+  /* 高域シェルフ(2.6kHz〜)のブースト量 dB。重低音偏重の緩和 */
+  airDb: 5,
+ };
+
+ const host = document.querySelector('#stage,#screen');
+ if (!host) return;
+ const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+ const isFire = host.id === 'screen';
+ const themeOf = () => isFire ? 'fire' : (host.dataset.theme || 'fire');
+ const timers = new Set();
+ const later = (ms, fn) => { const id = setTimeout(() => { timers.delete(id); fn(); }, ms); timers.add(id); return id; };
+ const clearTimers = () => { for (const id of timers) clearTimeout(id); timers.clear(); };
+
+ /* ---------------- 音 ---------------- */
+ const A = {
+  /* 通常は既存の score(GachaScore)を使う。検査用に src で差し替えられる(OfflineAudioContext など) */
+  src: null,
+  bus() { return this.src || (typeof score !== 'undefined' ? score : null); },
+  ok() { const s = this.bus(); return !!(s && s.ac && s.output && s.ac.state !== 'closed'); },
+  get ac() { return this.bus().ac; },
+  out() { return this.bus().output; },
+  noiseBuf: null,
+  noise() {
+   if (this.noiseBuf) return this.noiseBuf;
+   const ac = this.ac, b = ac.createBuffer(1, ac.sampleRate * 2, ac.sampleRate), d = b.getChannelData(0);
+   for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+   return this.noiseBuf = b;
+  },
+  /* ノイズの一発。filter: {type,from,to} で帯域を動かす */
+  burst(at, dur, level, filter, decay = true) {
+   const ac = this.ac, s = ac.createBufferSource(), g = ac.createGain(), f = ac.createBiquadFilter();
+   g.gain.value = 0; s.buffer = this.noise(); s.loop = true;
+   f.type = filter.type || 'bandpass'; f.Q.value = filter.q || .9;
+   f.frequency.setValueAtTime(filter.from, at); if (filter.to) f.frequency.exponentialRampToValueAtTime(filter.to, at + dur);
+   g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(level, at + (filter.attack || .006));
+   if (decay) g.gain.exponentialRampToValueAtTime(.0005, at + dur); else g.gain.setValueAtTime(level, at + dur - .05), g.gain.linearRampToValueAtTime(0, at + dur);
+   s.connect(f); f.connect(g); g.connect(this.out()); s.start(at); s.stop(at + dur + .02); this.bus().track(s); return s;
+  },
+  /* 正弦波などの一音。pitch {from,to} */
+  tone(at, dur, level, pitch, type = 'sine', curve = 'exp') {
+   const ac = this.ac, o = ac.createOscillator(), g = ac.createGain();
+   g.gain.value = 0; o.type = type; o.frequency.setValueAtTime(pitch.from, at);
+   if (pitch.to) o.frequency.exponentialRampToValueAtTime(pitch.to, at + dur);
+   g.gain.setValueAtTime(0, at); g.gain.linearRampToValueAtTime(level, at + .008);
+   if (curve === 'exp') g.gain.exponentialRampToValueAtTime(.0005, at + dur); else g.gain.linearRampToValueAtTime(0, at + dur);
+   o.connect(g); g.connect(this.out()); o.start(at); o.stop(at + dur + .02); this.bus().track(o); return o;
+  },
+  /* 歪み(炎のうなり用) */
+  shaper() {
+   if (this._shaper) return this._shaper;
+   const ws = this.ac.createWaveShaper(), n = 1024, curve = new Float32Array(n);
+   for (let i = 0; i < n; i++) { const x = i * 2 / n - 1; curve[i] = Math.tanh(x * 3.2); }
+   ws.curve = curve; return this._shaper = ws;
+  },
+
+  /* 亀裂が走る音: 高い「ピシッ」+ ガラスの鳴り */
+  crack(strength = 1) {
+   if (!this.ok()) return; const t = this.ac.currentTime;
+   this.burst(t, .09, .22 * strength, { type: 'bandpass', from: 5200, to: 2600, q: 2.5 });
+   this.tone(t, .35, .07 * strength, { from: 3200 + Math.random() * 900, to: 2100 }, 'triangle');
+   this.tone(t + .01, .12, .09 * strength, { from: 180, to: 60 }, 'sine');
+  },
+  /* 稲妻: 高域のバチッ + 低い雷鳴 */
+  bolt(intensity = .5) {
+   if (!this.ok()) return; const t = this.ac.currentTime;
+   this.burst(t, .07 + intensity * .08, .13 + intensity * .09, { type: 'highpass', from: 4200, q: .7 });
+   this.burst(t + .03, .45 + intensity * .4, .09 + intensity * .07, { type: 'lowpass', from: 420, to: 90, q: .8 });
+  },
+  /* フリーズ後の上昇(riser)。テーマごとに音色が違う。rift+gather の全長で一気に昇りつめる */
+  riser(theme, riftDur, gatherDur) {
+   if (!this.ok()) return; const ac = this.ac, t0 = ac.currentTime, total = riftDur + gatherDur, out = this.out();
+   /* 共通: 帯域が上がっていくノイズの風(300Hz→9kHz)。静寂(参考音源の 5.2-7.5秒)では一度沈む */
+   const n = ac.createBufferSource(), nf = ac.createBiquadFilter(), ng = ac.createGain();
+   n.buffer = this.noise(); n.loop = true; nf.type = 'bandpass'; nf.Q.value = 1.6;
+   nf.frequency.setValueAtTime(300, t0); nf.frequency.exponentialRampToValueAtTime(1400, t0 + riftDur); nf.frequency.setValueAtTime(900, t0 + riftDur + 2.2); nf.frequency.exponentialRampToValueAtTime(9000, t0 + total);
+   ng.gain.value = 0; ng.gain.setValueAtTime(0, t0); ng.gain.linearRampToValueAtTime(.08, t0 + riftDur); ng.gain.linearRampToValueAtTime(.02, t0 + riftDur + 2.2); ng.gain.linearRampToValueAtTime(.2, t0 + total - .3); ng.gain.linearRampToValueAtTime(0, t0 + total + .2);
+   n.connect(nf); nf.connect(ng); ng.connect(out); n.start(t0); n.stop(t0 + total + .3); this.bus().track(n);
+   /* 鼓動: 間隔が縮む(1.1秒→0.18秒)。高いクリックを乗せて重低音だけにしない */
+   let at = t0 + .4;
+   while (at < t0 + total - .25) {
+    const p = (at - t0) / total, lull = at > t0 + riftDur && at < t0 + riftDur + 2.2;
+    if (!lull) { this.tone(at, .22, .12 + p * .08, { from: 62 + p * 30, to: 38 }, 'sine'); this.burst(at, .03, .1 + p * .1, { type: 'highpass', from: 6000, q: .5 }); }
+    at += Math.max(.18, 1.1 - p * 1.0);
+   }
+   if (theme === 'fire') {
+    /* 炎: 歪んだ鋸歯波のうなり。音程が上がり、歪みが増す */
+    const o = ac.createOscillator(), g = ac.createGain(), f = ac.createBiquadFilter();
+    o.type = 'sawtooth'; o.frequency.setValueAtTime(55, t0); o.frequency.exponentialRampToValueAtTime(220, t0 + total);
+    f.type = 'lowpass'; f.frequency.setValueAtTime(400, t0); f.frequency.exponentialRampToValueAtTime(5200, t0 + total); f.Q.value = 4;
+    g.gain.value = 0; g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.1, t0 + riftDur); g.gain.linearRampToValueAtTime(.035, t0 + riftDur + 2.2); g.gain.linearRampToValueAtTime(.16, t0 + total - .2); g.gain.linearRampToValueAtTime(0, t0 + total + .1);
+    o.connect(this.shaper()); this.shaper().connect(f); f.connect(g); g.connect(out); o.start(t0); o.stop(t0 + total + .2); this.bus().track(o);
+    /* 爆ぜる火の粉(ランダムな高いパチパチ) */
+    for (let s = t0 + riftDur + 2.2; s < t0 + total; s += .05 + Math.random() * .25 * (1 - (s - t0) / total)) this.burst(s, .025, .07 + ((s - t0) / total) * .1, { type: 'bandpass', from: 3000 + Math.random() * 5000, q: 3 });
+   } else if (theme === 'dragon') {
+    /* 龍: 深い龍鳴り(サブ)+ 水の高いきらめき + 雷の遠鳴り */
+    const o = ac.createOscillator(), g = ac.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(44, t0); o.frequency.exponentialRampToValueAtTime(66, t0 + total);
+    g.gain.value = 0; g.gain.setValueAtTime(0, t0); g.gain.linearRampToValueAtTime(.14, t0 + riftDur); g.gain.linearRampToValueAtTime(.05, t0 + riftDur + 2.2); g.gain.linearRampToValueAtTime(.18, t0 + total - .3); g.gain.linearRampToValueAtTime(0, t0 + total + .1);
+    o.connect(g); g.connect(out); o.start(t0); o.stop(t0 + total + .2); this.bus().track(o);
+    for (let s = t0 + .3; s < t0 + total; s += .22 - ((s - t0) / total) * .15) { const p = (s - t0) / total; this.tone(s, .5, .05 + p * .06, { from: 2200 + Math.random() * 2600, to: 3200 + p * 3000 }, 'sine'); }
+   } else {
+    /* 祝福: 鐘の分散和音(ペンタトニック)が速くなり高く昇る + 金粉のシマー */
+    const scale = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.7, 1318.5, 1568, 1760, 2093, 2349, 2637];
+    let k = 0, s = t0 + .35;
+    while (s < t0 + total - .2) { const p = (s - t0) / total, lull = s > t0 + riftDur && s < t0 + riftDur + 2.2; const f = scale[Math.min(scale.length - 1, Math.floor(p * scale.length) + (k % 3))];
+     if (!lull) { this.tone(s, .8, .05 + p * .035, { from: f }, 'sine'); this.tone(s, .4, .025 + p * .02, { from: f * 2.01 }, 'triangle'); }
+     k++; s += Math.max(.11, .5 - p * .4); }
+    const sh = ac.createBufferSource(), sf = ac.createBiquadFilter(), sg = ac.createGain();
+    sh.buffer = this.noise(); sh.loop = true; sf.type = 'highpass'; sf.frequency.value = 7000; sg.gain.value = 0;
+    sg.gain.setValueAtTime(0, t0 + riftDur + 2.2); sg.gain.linearRampToValueAtTime(.09, t0 + total - .3); sg.gain.linearRampToValueAtTime(0, t0 + total + .1);
+    sh.connect(sf); sf.connect(sg); sg.connect(out); sh.start(t0 + riftDur + 2); sh.stop(t0 + total + .2); this.bus().track(sh);
+   }
+  },
+  /* 解放の一撃: 全帯域の炸裂 + 落ちる低音 + 明るい高音の和音 */
+  flare(theme) {
+   if (!this.ok()) return; const t = this.ac.currentTime;
+   this.burst(t, 1.3, .26, { type: 'lowpass', from: 12000, to: 300, q: .5 });
+   this.burst(t, .25, .2, { type: 'highpass', from: 5000, q: .4 });
+   this.tone(t, .9, .17, { from: 320, to: 36 }, 'sine');
+   const chord = theme === 'dragon' ? [1318.5, 1760, 2637] : theme === 'blessing' ? [1046.5, 1318.5, 1568, 2093] : [1174.7, 1568, 2349];
+   chord.forEach((f, i) => this.tone(t + .02 + i * .03, 1.6, .065, { from: f * 1.02, to: f }, 'sine', 'exp'));
+  },
+  /* PUSH前の鼓動(3.2秒で 70→170bpm)。画面の脈動クラスと同じ時刻で鳴らす */
+  heartbeat(duration = 3.2, onBeat) {
+   if (!this.ok()) return; const t0 = this.ac.currentTime; let at = 0;
+   while (at < duration - .15) {
+    const p = at / duration, abs = t0 + at;
+    this.tone(abs, .2, .2 + p * .12, { from: 70, to: 40 }, 'sine'); this.burst(abs, .035, .09 + p * .1, { type: 'highpass', from: 5500, q: .5 });
+    this.tone(abs + .14, .16, .11 + p * .08, { from: 58, to: 36 }, 'sine');
+    if (onBeat) later(at * 1000, () => onBeat(p));
+    at += Math.max(.35, .86 - p * .55);
+   }
+  },
+  pushAppear() { if (!this.ok()) return; const t = this.ac.currentTime; this.burst(t, .35, .35, { type: 'lowpass', from: 9000, to: 400 }); this.tone(t, 1.2, .14, { from: 1680, to: 1600 }, 'triangle'); this.tone(t, .6, .18, { from: 160, to: 42 }, 'sine'); },
+  pushVoid() { if (!this.ok()) return; const t = this.ac.currentTime; this.tone(t, .75, .14, { from: 620, to: 110 }, 'triangle'); this.burst(t, .5, .1, { type: 'lowpass', from: 2000, to: 150 }); },
+  miss() { if (!this.ok()) return; const t = this.ac.currentTime; this.tone(t, .55, .28, { from: 110, to: 34 }, 'sine'); this.burst(t, .4, .22, { type: 'lowpass', from: 3500, to: 120 }); this.tone(t + .12, .9, .12, { from: 440, to: 118 }, 'triangle'); },
+  shing(level = 1) { if (!this.ok()) return; const t = this.ac.currentTime; this.burst(t, .5, .22 * level, { type: 'bandpass', from: 2600, to: 9500, q: 1.4 }); this.tone(t, .7, .12 * level, { from: 2200, to: 3400 }, 'sine'); this.tone(t, .5, .2 * level, { from: 200, to: 40 }, 'sine'); },
+  sparkle(count = 12, span = 2.2) {
+   if (!this.ok()) return; const t = this.ac.currentTime, scale = [1046.5, 1174.7, 1318.5, 1568, 1760, 2093, 2349, 2637, 3136, 3520];
+   for (let i = 0; i < count; i++) { const at = t + (i / count) * span * (0.6 + 0.4 * (i / count)); this.tone(at, .5, .07, { from: scale[(i * 3) % scale.length] * (1 + Math.floor(i / scale.length)) }, 'sine'); this.burst(at, .03, .05, { type: 'highpass', from: 7000, q: .5 }); }
+  },
+  fanfare(rank) {
+   if (!this.ok()) return; const t = this.ac.currentTime;
+   this.burst(t, .6, .3, { type: 'lowpass', from: 10000, to: 500 }); this.tone(t, .8, .22, { from: 240, to: 40 }, 'sine');
+   const chord = rank === 'SS' ? [1046.5, 1318.5, 1568, 2093, 2637] : rank === 'S' ? [1046.5, 1318.5, 1568] : [880, 1108.7];
+   chord.forEach((f, i) => this.tone(t + .05 + i * .06, 1.4, .08, { from: f }, 'sine'));
+   if (rank === 'SS') this.sparkle(16, 1.8);
+  },
+ };
+
+ /* ---------------- 画面の衝撃(衝撃波リング・白フラッシュ・一瞬のカメラ押し) ---------------- */
+ const fxLayer = document.createElement('div');
+ fxLayer.className = 'v50-fx'; fxLayer.setAttribute('aria-hidden', 'true');
+ host.append(fxLayer);
+ function shock(kind = 'gold', strength = 1) {
+  if (reduced) return;
+  const ring = document.createElement('i'); ring.className = 'v50-shock v50-' + kind; ring.style.setProperty('--s', strength);
+  const flash = document.createElement('b'); flash.className = 'v50-flash v50-' + kind; flash.style.setProperty('--s', strength);
+  fxLayer.append(ring, flash);
+  host.classList.remove('v50-punch'); void host.offsetWidth; host.classList.add('v50-punch');
+  later(900, () => { ring.remove(); flash.remove(); });
+ }
+ const themeKind = () => ({ fire: 'fire', dragon: 'ice', blessing: 'gold' })[themeOf()] || 'gold';
+
+ /* ---------------- ランク別の祝福文(C/B賞に「おめでとう！」を出さない) ---------------- */
+ function rankOf() {
+  if (isFire) return host.dataset.rank || 'SS';
+  const m = (document.querySelector('#reveal-rank')?.textContent || '').match(/^(SS|S|A|B|C)/);
+  return m ? m[1] : 'SS';
+ }
+ function applyCongrats(rank) {
+  host.dataset.rank = rank;
+  const big = ['SS', 'S', 'A'].includes(rank);
+  for (const el of document.querySelectorAll('.congrats-message')) el.textContent = big ? 'おめでとう！' : rank + '賞 獲得';
+ }
+
+ /* ---------------- 場面の変化を見張る ---------------- */
+ let prev = '';
+ function onScene(name) {
+  if (name === prev) return; prev = name;
+  const theme = themeOf(), kind = themeKind();
+  const D = V50.freezeDurations[theme] || [4, 6];
+  switch (name) {
+   case 'rift': A.riser(theme, D[0], D[1]); later(60, () => shock(kind, .7)); break;
+   case 'gather': later(1600, () => shock(kind, .9)); break;
+   case 'rainbow': shock('rainbow', 1.2); A.sparkle(14, 2.2); break;
+   case 'pushtease': {
+    const el = host.querySelector('.push-anticipation');
+    A.heartbeat(3.2, p => { if (!el) return; el.classList.remove('v50-beat'); void el.offsetWidth; el.classList.add('v50-beat'); el.style.setProperty('--beat', p.toFixed(2)); });
+    break; }
+   case 'push': A.pushAppear(); shock(kind, .8); break;
+   case 'pushvoid': A.pushVoid(); break;
+   case 'miss': A.miss(); host.classList.remove('v50-drop'); void host.offsetWidth; host.classList.add('v50-drop'); break;
+   case 'strike': case 'awaken': case 'shatter': case 'swing': A.shing(1); shock(kind, 1); break;
+   case 'rush': shock('rainbow', .8); break;
+   case 'reveal': case 'win': { const r = rankOf(); applyCongrats(r); if (['SS', 'S', 'A'].includes(r)) { A.fanfare(r); shock(r === 'SS' ? 'rainbow' : kind, r === 'SS' ? 1.2 : .8); } break; }
+   case 'arrive': case 'draw': shock(kind, .6); break;
+   case 'tunnel': case 'seal': if (!isFire) delete host.dataset.rank; /* 前回の等級を引きずらない */ later(380, () => { if (prev === name) shock(kind, .9); }); break;
+  }
+ }
+ new MutationObserver(() => onScene(host.dataset.scene || host.dataset.phase || '')).observe(host, { attributes: true, attributeFilter: ['data-scene', 'data-phase'] });
+ host.addEventListener('v50:crack', e => A.crack(Math.min(1.3, e.detail.strength)));
+ host.addEventListener('v50:bolt', e => A.bolt(e.detail.intensity));
+ host.addEventListener('v50:flare', e => { A.flare(e.detail.theme); shock('white', 1.4); });
+ /* スキップ・終了で score.stop() が呼ばれたら、予約していた画面側の鼓動も止める */
+ if (typeof score !== 'undefined') score.onStop = clearTimers;
+ /* 検査・デバッグ用に音の部品を公開(本番の動作には使わない) */
+ V50.audio = A; V50.shock = shock;
+ document.addEventListener('visibilitychange', () => { if (document.hidden) clearTimers(); });
+})();

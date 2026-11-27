@@ -1,0 +1,21 @@
+/* Full-size cinematic objects replace the small card at the opening. */
+.opening-reveal{display:none;position:absolute;inset:0;z-index:7;pointer-events:none;overflow:hidden;--opening-color:#ff9b3d;background:radial-gradient(ellipse at 50% 43%,#28160c33,transparent 65%)}
+:is([data-scene=seal],[data-scene=draw],[data-phase=tunnel],[data-phase=arrive]) .opening-reveal{display:block}
+#stage:is([data-scene=seal],[data-scene=draw]) :is(#seal,#pack){display:none!important}
+#screen:is([data-phase=tunnel],[data-phase=arrive]) #pack{visibility:hidden}
+#stage[data-theme=dragon] .opening-reveal{--opening-color:#63e8ff;background:radial-gradient(ellipse at 50% 43%,#073c4b66,transparent 65%)}
+#stage[data-theme=blessing] .opening-reveal{--opening-color:#e9b5ff;background:radial-gradient(ellipse at 50% 43%,#4b255133,transparent 65%)}
+.opening-reveal img{display:none;position:absolute;inset:12% 7% 21%;width:86%;height:67%;object-fit:contain;filter:drop-shadow(0 20px 25px #000) drop-shadow(0 0 22px var(--opening-color));animation:openingArrival 1.5s cubic-bezier(.15,.7,.2,1) both}
+#screen .opening-sword{display:block;inset:12% 18% 18%;width:64%;height:70%;animation-duration:2.5s}
+#stage[data-theme=dragon] .opening-dragon{display:block}
+#stage[data-theme=blessing] .opening-chest{display:block;inset:20% 8% 24%;width:84%;height:56%}
+.opening-halo{position:absolute;left:13%;top:23%;width:74%;aspect-ratio:1;border-radius:50%;border:1px solid color-mix(in srgb,var(--opening-color),transparent 45%);box-shadow:0 0 40px color-mix(in srgb,var(--opening-color),transparent 80%),inset 0 0 50px color-mix(in srgb,var(--opening-color),transparent 85%);transform:rotateX(30deg);animation:openingHalo 2.2s both}
+.opening-light{position:absolute;inset:8% 12% 20%;background:radial-gradient(ellipse at 50% 55%,color-mix(in srgb,var(--opening-color),transparent 60%),transparent 62%);animation:openingLight 2s both;mix-blend-mode:screen}
+.opening-floor{position:absolute;left:18%;right:18%;top:73%;height:10%;border-radius:50%;background:radial-gradient(ellipse,color-mix(in srgb,var(--opening-color),transparent 35%),transparent 70%);filter:blur(8px);opacity:.6}
+#stage:is([data-scene=seal],[data-scene=draw]) .scene-label{z-index:10;top:auto;bottom:13%;left:4%;right:4%}
+:is([data-scene=draw],[data-phase=arrive]) .opening-reveal img{animation:openingPresent 1.8s ease-out both}
+@keyframes openingArrival{0%{opacity:0;transform:translateY(35px) scale(.72);filter:brightness(.2) blur(5px)}55%{opacity:1;filter:brightness(1.15) drop-shadow(0 0 25px var(--opening-color))}100%{opacity:1;transform:translateY(0) scale(1)}}
+@keyframes openingPresent{from{transform:scale(1)}to{transform:scale(1.04) translateY(-8px)}}
+@keyframes openingHalo{from{opacity:0;scale:.65}to{opacity:.8;scale:1}}
+@keyframes openingLight{from{opacity:0}to{opacity:.9}}
+@media(prefers-reduced-motion:reduce){.opening-reveal *{animation:none!important;transform:none!important}}

@@ -1,0 +1,44 @@
+/* Shared cinematic typography. Controls and ordinary instructions stay readable. */
+#stage,#screen{container-type:inline-size;--type-edge:#ffecc4;--type-glow:#ff7c21;--type-metal:linear-gradient(176deg,#fff9d9 0%,#ffe5a1 24%,#ab681f 41%,#fff6d9 46%,#e8bc62 56%,#6f3011 70%,#ffe6a0 84%,#fff9de 100%)}
+#stage[data-theme=dragon]{--type-edge:#d4fcff;--type-glow:#36ceff;--type-metal:linear-gradient(176deg,#fff 0%,#b4f7ff 25%,#276185 41%,#f4ffff 46%,#6acadd 56%,#123849 70%,#beeeff 84%,#fff 100%)}
+#stage[data-theme=blessing]{--type-edge:#ffedd1;--type-glow:#dd77ff}
+#scene-title,#awakening h2,#strike b,#whisper strong,#character-cut strong,.cinema-preview strong,.cinema-preview b,.cinema-push small,.push-anticipation strong,.descent-title strong,.rainbow-break strong,.congrats-message,#reveal-title,#prize-reveal h2{
+ box-sizing:border-box;font-family:'Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;font-weight:1000;font-style:italic;line-height:1.2;letter-spacing:-.045em;
+ color:#ffe5ac;background-image:var(--type-metal);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+ -webkit-text-stroke:1px var(--type-edge);paint-order:stroke fill;
+ text-shadow:none;filter:drop-shadow(0 2px #a66c30) drop-shadow(0 4px #58301a) drop-shadow(0 7px #110b13) drop-shadow(0 0 16px var(--type-glow));
+ padding-inline:8px;max-width:100%;overflow-wrap:anywhere;text-wrap:balance;
+}
+#scene-title{font-size:clamp(28px,8.5cqw,48px);animation:typeSlam .7s cubic-bezier(.16,.8,.2,1) both;min-height:1.3em;position:relative;isolation:isolate}
+#scene-title:empty{display:none}
+#scene-title:not(:empty):before{content:'';position:absolute;inset:-18px -8% -20px;background:linear-gradient(90deg,transparent,#02040bda 25% 75%,transparent);z-index:-1;transform:skew(-8deg);border-block:1px solid #ffe9bc44}
+#strike b{font-size:clamp(46px,19cqw,100px);animation:typeSlam .65s both}
+#whisper strong{font-size:clamp(38px,13cqw,72px)}
+#awakening h2{font-size:clamp(30px,9.5cqw,54px)}
+#character-cut strong{font-size:clamp(30px,11cqw,60px)}
+.cinema-preview strong{font-size:clamp(46px,16cqw,90px);animation:typeSlam .8s both}
+.cinema-preview b{font-size:clamp(24px,6.5cqw,36px);margin-inline:16px;animation:typeRise .6s .35s both}
+.cinema-push small{font-size:clamp(24px,7cqw,38px);letter-spacing:-.025em;animation:typeSlam .65s both}
+.push-anticipation strong{font-size:clamp(32px,10cqw,55px);animation:typeRise .65s both}
+.descent-title strong{font-size:clamp(40px,13cqw,74px);white-space:normal;-webkit-text-stroke:1.3px var(--type-edge)}
+.rainbow-break strong,.congrats-message{font-size:clamp(28px,9.8cqw,55px);white-space:nowrap;letter-spacing:-.06em;animation:typeSlam .75s both}
+#reveal-title,#prize-reveal h2{font-size:clamp(28px,8.5cqw,48px);letter-spacing:-.04em;animation:typeRise .65s both}
+[data-freeze-theme=dragon]{--type-edge:#d4fcff;--type-glow:#36ceff}
+[data-freeze-theme=blessing]{--type-edge:#fff3d4;--type-glow:#ea80ff}
+@keyframes typeSlam{0%{opacity:0;transform:scale(1.16) translateY(-22px);filter:blur(5px)}42%{opacity:1;transform:scale(.96) translateY(3px)}60%{transform:scale(1.02) translateY(-2px)}78%{transform:scale(.99) translateY(1px)}100%{opacity:1;transform:scale(1) translateY(0)}}
+@keyframes typeRise{from{opacity:0;transform:translateY(18px) scale(.94)}to{opacity:1;transform:translateY(0) scale(1)}}
+@media(max-width:360px){.rainbow-break strong,.congrats-message{font-size:9cqw}.descent-title strong{font-size:12cqw}}
+@media(prefers-reduced-motion:reduce){#scene-title,#strike b,#whisper strong,#awakening h2,#character-cut strong,.cinema-preview strong,.cinema-preview b,.cinema-push small,.push-anticipation strong,.descent-title strong,.rainbow-break strong,.congrats-message,#reveal-title,#prize-reveal h2{animation:none!important;transform:none!important}}
+/* A heavy, fractured silver failure title, shared by all themes. */
+#miss strong,#screen[data-phase=miss]:after{
+ box-sizing:border-box;display:block;font-family:'Hiragino Kaku Gothic ProN','Yu Gothic',sans-serif;font-weight:1000;font-style:italic;font-size:clamp(42px,15cqw,84px);line-height:1.25;letter-spacing:-.065em;text-align:center;white-space:nowrap;
+ color:#d9dce3;background:linear-gradient(175deg,#f2f4f8 0%,#a6aebc 29%,#3b4252 42%,#e2e5eb 47%,#8792a6 59%,#282d3b 73%,#cbd2dd 88%);background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;
+ -webkit-text-stroke:1.3px #d3dae4;paint-order:stroke fill;text-shadow:none;
+ filter:drop-shadow(0 3px #4c2530) drop-shadow(0 6px #20121e) drop-shadow(0 10px #03040b) drop-shadow(0 0 20px #a5224c88);
+ padding:12px 4%;max-width:100%;animation:missImpact .8s cubic-bezier(.18,.7,.25,1) both;
+}
+#miss{background:radial-gradient(ellipse at 50% 45%,#48112666,#010308e6 70%)}
+#miss small{color:#b9b6c6;letter-spacing:4px;text-shadow:0 2px 6px #000}
+#screen[data-phase=miss]:after{inset:38% 0 auto;width:100%;height:auto;z-index:22}
+@keyframes missImpact{0%{opacity:0;transform:scale(1.12) translateY(-32px);filter:blur(5px)}35%{opacity:1;transform:scale(.98) translateY(7px)}48%{transform:translate(-3px,-3px)}61%{transform:translate(2px,3px)}75%{transform:translate(-1px,0)}100%{opacity:1;transform:scale(1) translateY(0)}}
+@media(prefers-reduced-motion:reduce){#miss strong,#screen[data-phase=miss]:after{animation:none!important;transform:none!important}}
