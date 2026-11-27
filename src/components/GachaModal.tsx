@@ -62,7 +62,9 @@ export default function GachaModal({ pkgName, drawCount, drawId, results, left, 
   // 演出ページは「確定した当選記録のID」だけを受け取り、記録をサーバーから読んで再生する(等級や景品はURLで渡さない)
   const bestResult = results.reduce((a, r) => (RANK[r.rarity] > RANK[a.rarity] ? r : a), results[0]);
   const [c1] = HUES[best];
-  const unshipped = results.filter((r) => r.status === "won").length;
+  const unshipped = results.filter((r) => r.status === "won" && r.options.length === 0).length;
+  const choosable = results.filter((r) => r.status === "won" && r.options.length > 0).length;
+  const requested = results.filter((r) => r.status !== "won").length; // この画面で発送依頼した点数
   const cinemaSrc = `/gacha/index.html?draw=${bestResult.id}&app=1`;
 
   return (
@@ -98,9 +100,12 @@ export default function GachaModal({ pkgName, drawCount, drawId, results, left, 
             <div className="mt-3 grid gap-2">
               <button type="button" onClick={() => { setEnded(false); setStep("cinema"); }} className="btn btn-outline w-full !py-2.5">🎬 もう一度演出を見る（{LABEL[bestResult.rarity]}）</button>
               {unshipped > 0 ? (
-                <button onClick={onShip} disabled={busy} className="btn w-full !py-2.5">🚚 当選品を発送依頼する（{unshipped}点）</button>
-              ) : (
-                <p className="text-sm text-accent-2 border border-accent/30 rounded-xl p-2">🚚 発送依頼を受け付けました。発送までお待ちください。</p>
+                <button onClick={onShip} disabled={busy} className="btn w-full !py-2.5">🚚 当選品を発送依頼する（{unshipped}点{choosable > 0 ? "・選べる賞を除く" : ""}）</button>
+              ) : requested > 0 ? (
+                <p className="text-sm text-accent-2 border border-accent/30 rounded-xl p-2">🚚 発送依頼を受け付けました（{requested}点）。発送までお待ちください。</p>
+              ) : null}
+              {choosable > 0 && (
+                <p className="text-sm text-accent-2 border border-accent/30 rounded-xl p-2 text-left">🎁 選べる賞が{choosable}点あります。とじた後、ページ下の「発送依頼がまだの当選品」でどれにするか（メダカかエサかなど）を選んでから発送依頼してください。</p>
               )}
               {left > 0 && <button onClick={onAgain} disabled={busy} className="btn btn-outline w-full !py-2">続けて引く（この注文の残り {left} 口）</button>}
               <button onClick={onClose} className="text-xs text-muted underline mt-0.5">とじる</button>
@@ -129,6 +134,7 @@ function ResultCard({ r, delay, single }: { r: DrawResult; delay: number; single
       <div className="p-2">
         <div className={`font-bold leading-snug ${single ? "text-sm" : "text-[11px]"} line-clamp-2`}>{r.name}</div>
         <div className="text-[10px] text-muted mt-0.5">参考価格 <span className="tnum">{yen(r.refPrice)}</span></div>
+        {r.options.length > 0 && !shipped && <div className="text-[10px] mt-0.5 text-accent-2">🎁 選べる賞: {r.options.join("／")}</div>}
         {shipped && <div className="text-[10px] mt-0.5 text-accent-2">🚚 発送依頼済み</div>}
       </div>
     </div>

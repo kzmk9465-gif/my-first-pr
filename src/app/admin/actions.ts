@@ -269,7 +269,7 @@ export async function addOripaPrizeAction(formData: FormData): Promise<void> {
     if (!r.ok) redirect(`/admin/oripa?error=${encodeURIComponent(r.error)}`);
     imageUrl = r.url;
   }
-  addPrize(pkgId, { rarity: rarity as "S" | "A" | "B" | "C", name, kind: kind as "medaka" | "goods" | "card", ref_price: Number(str(formData, "ref_price")) || 0, ref_note: str(formData, "ref_note", 120), image_url: imageUrl, count });
+  addPrize(pkgId, { rarity: rarity as "S" | "A" | "B" | "C", name, kind: kind as "medaka" | "goods" | "card", ref_price: Number(str(formData, "ref_price")) || 0, ref_note: str(formData, "ref_note", 120), image_url: imageUrl, count, options: str(formData, "options", 300) });
   revalidatePath("/oripa");
   redirect("/admin/oripa?saved=1");
 }

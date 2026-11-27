@@ -54,15 +54,15 @@ export function seedOripa(db = getDb()): number {
   const count = (db.prepare("SELECT COUNT(*) AS c FROM oripa_packages").get() as { c: number }).c;
   if (count > 0) return 0;
   const insP = db.prepare("INSERT INTO oripa_packages (slug, name, subtitle, price_yen, total, hue1, hue2) VALUES (?, ?, ?, ?, ?, ?, ?)");
-  const insZ = db.prepare("INSERT INTO oripa_prizes (package_id, rarity, name, kind, ref_price, count_total, count_left) VALUES (?, ?, ?, 'medaka', ?, ?, ?)");
-  const boxes: { slug: string; name: string; subtitle: string; price: number; total: number; hue: [string, string]; prizes: [string, string, number, number][] }[] = [
+  const insZ = db.prepare("INSERT INTO oripa_prizes (package_id, rarity, name, kind, ref_price, count_total, count_left, options) VALUES (?, ?, ?, 'medaka', ?, ?, ?, ?)");
+  const boxes: { slug: string; name: string; subtitle: string; price: number; total: number; hue: [string, string]; prizes: [string, string, number, number, string?][] }[] = [
     {
       slug: "gokujo-rame", name: "播州極上ラメくじ", subtitle: "限定30口・目玉は当店自慢のラメ系。全口が賞品付き", price: 5000, total: 30, hue: ["#0ea5b7", "#0284C7"],
-      prizes: [["S", "ミッドナイトフリル 極上オス", 60000, 1], ["A", "三色ラメ幹之 選抜ペア", 20000, 3], ["B", "ラメ幹之 お楽しみペア", 8000, 10], ["C", "ラメ系 おすすめ1ペア（5,000円相当）", 5000, 16]],
+      prizes: [["S", "ミッドナイトフリル 極上オス", 60000, 1], ["A", "三色ラメ幹之 選抜ペア", 20000, 3], ["B", "ラメ幹之 お楽しみペア", 8000, 10], ["C", "選べるC賞（メダカかエサか用品・5,000円相当）", 5000, 16, "ラメ系 おすすめ1ペア／めだかのエサ 高たんぱく詰め合わせ／産卵床・飼育用品セット"]],
     },
     {
       slug: "ryusei", name: "流星スペシャルくじ", subtitle: "お手頃3,000円・はじめての方に。限定40口", price: 3000, total: 40, hue: ["#6d5cff", "#3b82f6"],
-      prizes: [["S", "流星ラメ 特選オス", 30000, 1], ["A", "アルビノ ロングフィン ペア", 12000, 4], ["B", "みゆき系 お楽しみペア", 5000, 12], ["C", "おすすめ 1ペア（3,000円相当）", 3000, 23]],
+      prizes: [["S", "流星ラメ 特選オス", 30000, 1], ["A", "アルビノ ロングフィン ペア", 12000, 4], ["B", "みゆき系 お楽しみペア", 5000, 12], ["C", "選べるC賞（メダカかエサ・3,000円相当）", 3000, 23, "おすすめ 1ペア／めだかのエサ 高たんぱく 100g×2"]],
     },
     {
       slug: "shuryu", name: "朱龍プレミアムくじ", subtitle: "一口10,000円の特大くじ。限定20口", price: 10000, total: 20, hue: ["#e0565f", "#f0693f"],
@@ -71,7 +71,7 @@ export function seedOripa(db = getDb()): number {
   ];
   for (const b of boxes) {
     const id = Number(insP.run(b.slug, b.name, b.subtitle, b.price, b.total, b.hue[0], b.hue[1]).lastInsertRowid);
-    for (const [rarity, name, ref, n] of b.prizes) insZ.run(id, rarity, name, ref, n, n);
+    for (const [rarity, name, ref, n, opts] of b.prizes) insZ.run(id, rarity, name, ref, n, n, opts ?? "");
   }
   return boxes.length;
 }

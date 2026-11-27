@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { siteConfig } from "@/lib/config";
 import Link from "next/link";
 import { getCurrentUser, canBid } from "@/lib/auth";
-import { CLAIM_DAYS, FREE_SHIPPING_COUNT, ORDER_EXPIRE_DAYS, RARITY_LABEL, SHIPPING_YEN, drawableOrders, myOrders, packageViews, unclaimedWins } from "@/lib/oripa";
+import { CLAIM_DAYS, FREE_SHIPPING_COUNT, ORDER_EXPIRE_DAYS, RARITY_LABEL, SHIPPING_YEN, drawableOrders, myOrders, packageViews, parseOptions, unclaimedWins } from "@/lib/oripa";
 import OripaCard, { type PkgLite } from "@/components/OripaCard";
 import { formatDateTime } from "@/lib/format";
 import { shipAllOripaAction } from "./actions";
@@ -23,7 +23,7 @@ export default async function OripaPage({ searchParams }: { searchParams: Promis
 
   const packages: PkgLite[] = views.map((p) => ({
     id: p.id, slug: p.slug, name: p.name, subtitle: p.subtitle, price_yen: p.price_yen, total: p.total, hue1: p.hue1, hue2: p.hue2,
-    prizes: p.prizes.map((x) => ({ id: x.id, rarity: x.rarity, name: x.name, kind: x.kind, ref_price: x.ref_price, count_total: x.count_total })),
+    prizes: p.prizes.map((x) => ({ id: x.id, rarity: x.rarity, name: x.name, kind: x.kind, ref_price: x.ref_price, count_total: x.count_total, options: parseOptions(x.options) })),
   }));
 
   return (
@@ -75,20 +75,27 @@ export default async function OripaPage({ searchParams }: { searchParams: Promis
         <section className="rounded-2xl border border-accent/30 bg-[#182234] p-4">
           <div className="flex flex-wrap items-center justify-between gap-2">
             <h2 className="font-bold text-accent-2">発送依頼がまだの当選品（{wins.length}点）</h2>
-            <form action={shipAllOripaAction}>
+            <form action={shipAllOripaAction} id="ship-all">
               <input type="hidden" name="ids" value={wins.map((w) => w.id).join(",")} />
               <button className="btn !py-1.5 text-sm">🚚 まとめて発送依頼する</button>
             </form>
           </div>
           <ul className="divide-y divide-white/5 text-sm mt-2">
             {wins.map((w) => (
-              <li key={w.id} className="py-2 flex items-center justify-between gap-2">
-                <span><span className="badge badge-star mr-1">{RARITY_LABEL[w.rarity]}</span>{w.prize_name}</span>
+              <li key={w.id} className="py-2 flex flex-wrap items-center justify-between gap-2">
+                <span className="flex flex-wrap items-center gap-1.5"><span><span className="badge badge-star mr-1">{RARITY_LABEL[w.rarity]}</span>{w.prize_name}</span>
+                  {parseOptions(w.options).length > 0 && (
+                    <select name={`choice_${w.id}`} form="ship-all" required defaultValue="" className="input !py-1 text-xs max-w-[16rem]" aria-label="選べる賞の選択">
+                      <option value="" disabled>🎁 どれにするか選ぶ</option>
+                      {parseOptions(w.options).map((o) => <option key={o} value={o}>{o}</option>)}
+                    </select>
+                  )}
+                </span>
                 <span className="text-xs text-muted whitespace-nowrap"><a className="underline text-accent-2 mr-2" href={`/gacha/index.html?draw=${w.id}`} target="_blank" rel="noreferrer">演出を見る</a>{formatDateTime(w.created_at)}</span>
               </li>
             ))}
           </ul>
-          <p className="text-[11px] text-muted mt-1">当選から{CLAIM_DAYS}日以内に発送依頼をしてください。期限を過ぎた当選品は権利放棄とみなされます（利用規約）。</p>
+          <p className="text-[11px] text-muted mt-1">当選から{CLAIM_DAYS}日以内に発送依頼をしてください。期限を過ぎた当選品は権利放棄とみなされます（利用規約）。「選べる賞」は、どれにするかを選んでから発送依頼してください（選んだ後の変更はできません）。</p>
         </section>
       )}
 
@@ -102,6 +109,7 @@ export default async function OripaPage({ searchParams }: { searchParams: Promis
         <ul className="text-[11px] text-muted mt-3 space-y-0.5 list-disc pl-5">
           <li>各くじは総口数と各賞の本数が先に決まっていて、引かれた分だけ減ります。残り口数は常に表示します（賞ごとの残本数は表示しません）。</li>
           <li>全口が賞品付きです。当選品のポイント化・買い取り・他の商品との交換はできません。</li>
+          <li>一部の賞は「選べる賞」です（例: メダカかエサか用品）。当選した方が発送依頼のときに選択肢の中から1つ選びます。</li>
           <li>18歳未満の方はご購入いただけません。購入後の返金はできません。</li>
           <li>送料は1回の注文につき{yen(SHIPPING_YEN)}（{FREE_SHIPPING_COUNT}口以上で無料）。口の代金と合わせて1回でお支払いいただきます。</li>
           <li>参考価格は、当店のオークション（競市）での落札実績か、それが無い品種は他店の落札価格の目安です（根拠・件数・時期は各賞に記載）。当店の販売価格ではなく、価値を保証するものではありません。</li>

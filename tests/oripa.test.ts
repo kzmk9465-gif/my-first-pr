@@ -104,7 +104,9 @@ test("当選品は発送依頼できる（還元はできない）", async () =>
   const r = await draw(adult, o.token, 1);
   assert.ok(r.ok);
   if (!r.ok) return;
-  const ship = await requestShipping(adult, [r.results[0].id]);
+  const w = r.results[0];
+  // 流星くじのC賞は「選べる賞」なので、その場合は選択肢を1つ添える
+  const ship = await requestShipping(adult, [w.id], w.options.length > 0 ? { [w.id]: w.options[0] } : {});
   assert.ok(ship.ok);
   const row = getDb().prepare("SELECT status FROM oripa_draws WHERE id = ?").get(r.results[0].id) as { status: string };
   assert.equal(row.status, "ship_requested");
@@ -130,4 +132,29 @@ test("送料: 少口数の注文は送料を合算、所定口数以上は無料
     assert.equal(o.shipping_yen, 0);
     assert.equal(o.amount_yen, 3000 * FREE_SHIPPING_COUNT);
   }
+});
+
+test("選べる賞：発送依頼のときに選択肢から1つ選ぶ。未選択・選択肢外は不可、選んだものが記録される", async () => {
+  const id = createPackage({ slug: "choice-box", name: "選べる箱", price_yen: 1000, total: 1 });
+  addPrize(id, { rarity: "C", name: "選べるC賞", count: 1, options: "ラメ系 1ペア／めだかのエサ 100g" });
+  assert.equal(listPrizes(id)[0].options, "ラメ系 1ペア／めだかのエサ 100g");
+  const o = createOrder(ADULT, "choice-box", 1, "mock");
+  assert.ok(o.ok);
+  if (!o.ok) return;
+  markOrderPaid(o.token);
+  const r = await draw(adult, o.token, 1);
+  assert.ok(r.ok);
+  if (!r.ok) return;
+  assert.deepEqual(r.results[0].options, ["ラメ系 1ペア", "めだかのエサ 100g"]);
+  const did = r.results[0].id;
+  const none = await requestShipping(adult, [did]);
+  assert.equal(none.ok, false);
+  const bad = await requestShipping(adult, [did], { [did]: "現金" });
+  assert.equal(bad.ok, false);
+  assert.equal((getDb().prepare("SELECT status FROM oripa_draws WHERE id = ?").get(did) as { status: string }).status, "won");
+  const good = await requestShipping(adult, [did], { [did]: "めだかのエサ 100g" });
+  assert.ok(good.ok);
+  const row = getDb().prepare("SELECT status, choice FROM oripa_draws WHERE id = ?").get(did) as { status: string; choice: string };
+  assert.equal(row.status, "ship_requested");
+  assert.equal(row.choice, "めだかのエサ 100g");
 });

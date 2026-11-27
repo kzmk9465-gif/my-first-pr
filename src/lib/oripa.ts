@@ -22,6 +22,11 @@ export const RARITY_LABEL: Record<Rarity, string> = { S: "S賞", A: "A賞", B: "
 export const RARITY_RANK: Record<Rarity, number> = { S: 4, A: 3, B: 2, C: 1 };
 export const KIND_LABEL: Record<PrizeKind, string> = { medaka: "メダカ（生体）", goods: "用品", card: "カード" };
 
+/** 選べる賞の選択肢（「／」「/」「|」改行 区切り）を配列にする。空なら通常の賞 */
+export function parseOptions(s: string | null | undefined): string[] {
+  return (s ?? "").split(/[／\/|\n]/).map((x) => x.trim()).filter(Boolean);
+}
+
 /** 未入金の注文を無効にするまでの日数 */
 export const ORDER_EXPIRE_DAYS = 3;
 /** 1回の購入で買える口数 */
@@ -54,6 +59,8 @@ export type OripaPrize = {
   image_url: string | null;
   count_total: number;
   count_left: number;
+  /** 選べる賞の選択肢（「／」区切り）。空なら通常の賞。当選者が発送依頼のときに1つ選ぶ（2026-11-28 社長要望：欲しいメダカでなくてもエサ等を選べるように） */
+  options: string;
 };
 
 export type OripaOrder = {
@@ -71,7 +78,7 @@ export type OripaOrder = {
   paid_at: string | null;
 };
 
-export type DrawResult = { id: number; rarity: Rarity; name: string; kind: PrizeKind; refPrice: number; imageUrl: string | null; status: string };
+export type DrawResult = { id: number; rarity: Rarity; name: string; kind: PrizeKind; refPrice: number; imageUrl: string | null; status: string; options: string[] };
 
 /** 決済手段。DEMO_MODE=1 のお試し環境ではテスト決済、本番は銀行振込（決済代行は接続後に psp） */
 export function oripaProvider(): "bank" | "mock" {
@@ -118,10 +125,10 @@ export function setPackageStatus(id: number, status: "open" | "closed"): void {
   getDb().prepare("UPDATE oripa_packages SET status = ? WHERE id = ?").run(status, id);
 }
 
-export function addPrize(packageId: number, data: { rarity: Rarity; name: string; kind?: PrizeKind; ref_price?: number; ref_note?: string; image_url?: string | null; count: number }): number {
+export function addPrize(packageId: number, data: { rarity: Rarity; name: string; kind?: PrizeKind; ref_price?: number; ref_note?: string; image_url?: string | null; count: number; options?: string }): number {
   const r = getDb()
-    .prepare("INSERT INTO oripa_prizes (package_id, rarity, name, kind, ref_price, ref_note, image_url, count_total, count_left) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
-    .run(packageId, data.rarity, data.name, data.kind ?? "medaka", data.ref_price ?? 0, data.ref_note ?? "", data.image_url ?? null, data.count, data.count);
+    .prepare("INSERT INTO oripa_prizes (package_id, rarity, name, kind, ref_price, ref_note, image_url, count_total, count_left, options) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    .run(packageId, data.rarity, data.name, data.kind ?? "medaka", data.ref_price ?? 0, data.ref_note ?? "", data.image_url ?? null, data.count, data.count, parseOptions(data.options).join("／"));
   return Number(r.lastInsertRowid);
 }
 
@@ -281,7 +288,7 @@ export async function draw(
       if (Number(d.changes) !== 1) throw new Error("prize underflow");
       p.count_left -= 1;
       const r = ins.run(userId, pkg.slug, p.rarity, p.name, p.ref_price, order.id, p.id, p.kind);
-      results.push({ id: Number(r.lastInsertRowid), rarity: p.rarity, name: p.name, kind: p.kind, refPrice: p.ref_price, imageUrl: p.image_url, status: "won" });
+      results.push({ id: Number(r.lastInsertRowid), rarity: p.rarity, name: p.name, kind: p.kind, refPrice: p.ref_price, imageUrl: p.image_url, status: "won", options: parseOptions(p.options) });
     }
     db.prepare("UPDATE oripa_orders SET drawn = drawn + ? WHERE id = ?").run(n, order.id);
     db.exec("COMMIT");
@@ -300,17 +307,23 @@ export async function draw(
   return { ok: true, results, left: order.count - order.drawn, remaining: remaining(pkgId) };
 }
 
-/** 当選品の発送を依頼する。 */
-export async function requestShipping(userId: number, drawIds: number[]): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
+/** 当選品の発送を依頼する。選べる賞（options あり）は choices[当選ID] で選択肢から1つ選ぶ（必須・選んだ後は変更不可）。 */
+export async function requestShipping(userId: number, drawIds: number[], choices: Record<number, string> = {}): Promise<{ ok: true; count: number } | { ok: false; error: string }> {
   const db = getDb();
   const names: string[] = [];
   db.exec("BEGIN IMMEDIATE");
   try {
     for (const id of drawIds) {
-      const row = db.prepare("SELECT id, status, prize_name FROM oripa_draws WHERE id = ? AND user_id = ?").get(id, userId) as { id: number; status: string; prize_name: string } | undefined;
+      const row = db.prepare("SELECT d.id, d.status, d.prize_name, COALESCE(p.options, '') AS options FROM oripa_draws d LEFT JOIN oripa_prizes p ON p.id = d.prize_id WHERE d.id = ? AND d.user_id = ?").get(id, userId) as { id: number; status: string; prize_name: string; options: string } | undefined;
       if (!row || row.status !== "won") continue;
-      db.prepare("UPDATE oripa_draws SET status = 'ship_requested' WHERE id = ?").run(id);
-      names.push(row.prize_name);
+      const opts = parseOptions(row.options);
+      let choice: string | null = null;
+      if (opts.length > 0) {
+        choice = String(choices[id] ?? "").trim();
+        if (!opts.includes(choice)) { db.exec("ROLLBACK"); return { ok: false, error: `「${row.prize_name}」は選べる賞です。選択肢から1つ選んでから発送依頼してください。` }; }
+      }
+      db.prepare("UPDATE oripa_draws SET status = 'ship_requested', choice = ? WHERE id = ?").run(choice, id);
+      names.push(choice ? `${row.prize_name}（${choice}）` : row.prize_name);
     }
     db.exec("COMMIT");
   } catch (e) {
@@ -327,15 +340,16 @@ export function markDrawShipped(drawId: number): void {
   getDb().prepare("UPDATE oripa_draws SET status = 'shipped' WHERE id = ? AND status = 'ship_requested'").run(drawId);
 }
 
-export type WinRow = { id: number; package_id: string; rarity: Rarity; prize_name: string; kind: PrizeKind; ref_price: number; status: string; created_at: string };
+export type WinRow = { id: number; package_id: string; rarity: Rarity; prize_name: string; kind: PrizeKind; ref_price: number; status: string; created_at: string; /** 選べる賞の選択肢（「／」区切り・空なら通常の賞） */ options: string; /** 発送依頼のときに選んだもの */ choice: string | null };
+const WIN_SELECT = "SELECT d.id, d.package_id, d.rarity, d.prize_name, d.kind, d.ref_price, d.status, d.created_at, COALESCE(p.options, '') AS options, d.choice FROM oripa_draws d LEFT JOIN oripa_prizes p ON p.id = d.prize_id";
 
 export function myWins(userId: number, limit = 20): WinRow[] {
-  return getDb().prepare("SELECT id, package_id, rarity, prize_name, kind, ref_price, status, created_at FROM oripa_draws WHERE user_id = ? ORDER BY id DESC LIMIT ?").all(userId, limit) as WinRow[];
+  return getDb().prepare(`${WIN_SELECT} WHERE d.user_id = ? ORDER BY d.id DESC LIMIT ?`).all(userId, limit) as WinRow[];
 }
 
 /** 当選したまま発送依頼をしていない品（まとめて依頼できるように） */
 export function unclaimedWins(userId: number): WinRow[] {
-  return getDb().prepare("SELECT id, package_id, rarity, prize_name, kind, ref_price, status, created_at FROM oripa_draws WHERE user_id = ? AND status = 'won' ORDER BY id DESC").all(userId) as WinRow[];
+  return getDb().prepare(`${WIN_SELECT} WHERE d.user_id = ? AND d.status = 'won' ORDER BY d.id DESC`).all(userId) as WinRow[];
 }
 
 export type ShipRequestRow = WinRow & { email: string; name: string | null; shipping_name: string | null; shipping_postal: string | null; shipping_address: string | null; shipping_phone: string | null };
@@ -343,7 +357,7 @@ export type ShipRequestRow = WinRow & { email: string; name: string | null; ship
 /** 管理：発送依頼が来ている当選品 */
 export function shippingRequests(): ShipRequestRow[] {
   return getDb()
-    .prepare("SELECT d.id, d.package_id, d.rarity, d.prize_name, d.kind, d.ref_price, d.status, d.created_at, u.email, u.name, u.shipping_name, u.shipping_postal, u.shipping_address, u.shipping_phone FROM oripa_draws d JOIN users u ON u.id = d.user_id WHERE d.status = 'ship_requested' ORDER BY d.id")
+    .prepare("SELECT d.id, d.package_id, d.rarity, d.prize_name, d.kind, d.ref_price, d.status, d.created_at, COALESCE(p.options, '') AS options, d.choice, u.email, u.name, u.shipping_name, u.shipping_postal, u.shipping_address, u.shipping_phone FROM oripa_draws d JOIN users u ON u.id = d.user_id LEFT JOIN oripa_prizes p ON p.id = d.prize_id WHERE d.status = 'ship_requested' ORDER BY d.id")
     .all() as ShipRequestRow[];
 }
 

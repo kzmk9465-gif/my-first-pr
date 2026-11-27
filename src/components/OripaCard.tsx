@@ -7,7 +7,7 @@ import { buyOripaAction, drawOripaAction, shipOripaAction } from "@/app/oripa/ac
 import type { DrawResult, Rarity } from "@/lib/oripa";
 import { FREE_SHIPPING_COUNT, SHIPPING_YEN, shippingFor } from "@/lib/oripa-shipping";
 
-export type PrizeLite = { id: number; rarity: Rarity; name: string; kind: string; ref_price: number; ref_note?: string; count_total: number };
+export type PrizeLite = { id: number; rarity: Rarity; name: string; kind: string; ref_price: number; ref_note?: string; count_total: number; options: string[] };
 export type PkgLite = {
   id: number; slug: string; name: string; subtitle: string; price_yen: number; total: number;
   hue1: string; hue2: string; prizes: PrizeLite[];
@@ -55,7 +55,9 @@ export default function OripaCard({ pkg, remaining: remaining0, sellable, logged
   const onShip = () => {
     if (!results) return;
     setError(null);
-    const ids = results.filter((x) => x.status === "won").map((x) => x.id);
+    // 選べる賞は選択肢を決めてから（ページ下の一覧で）依頼する。ここでは通常の賞だけ依頼する
+    const ids = results.filter((x) => x.status === "won" && x.options.length === 0).map((x) => x.id);
+    if (ids.length === 0) return;
     start(async () => {
       const r = await shipOripaAction(ids);
       if (!r.ok) { setError(r.error); return; }
@@ -101,7 +103,7 @@ export default function OripaCard({ pkg, remaining: remaining0, sellable, logged
             {prizes.map((p) => (
               <tr key={p.id} className="border-t border-white/5">
                 <td className="py-1 pr-1 whitespace-nowrap font-bold" style={{ color: COLOR[p.rarity] }}>{LABEL[p.rarity]}</td>
-                <td className="py-1 pr-1">{p.name}<span className="text-muted"> ・参考 {yen(p.ref_price)}{p.ref_note ? `（${p.ref_note}）` : ""}</span></td>
+                <td className="py-1 pr-1">{p.name}<span className="text-muted"> ・参考 {yen(p.ref_price)}{p.ref_note ? `（${p.ref_note}）` : ""}</span>{p.options.length > 0 && <div className="text-[10px] text-accent-2">🎁 選べる: {p.options.join("／")}</div>}</td>
                 <td className="py-1 text-right tnum whitespace-nowrap text-muted">{p.count_total}本</td>
               </tr>
             ))}

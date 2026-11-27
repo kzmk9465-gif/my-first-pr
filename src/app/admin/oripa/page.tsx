@@ -60,7 +60,7 @@ export default async function AdminOripaPage({ searchParams }: { searchParams: P
           <div className="divide-y divide-accent/10 text-sm">
             {ships.map((s) => (
               <div key={s.id} className="py-2 flex flex-wrap justify-between gap-2">
-                <div><span className="badge badge-star mr-1">{RARITY_LABEL[s.rarity]}</span><b>{s.prize_name}</b> <span className="text-xs text-muted">({KIND_LABEL[s.kind]})</span>
+                <div><span className="badge badge-star mr-1">{RARITY_LABEL[s.rarity]}</span><b>{s.prize_name}</b>{s.choice && <b className="text-accent-2"> → 選択: {s.choice}</b>} <span className="text-xs text-muted">({KIND_LABEL[s.kind]})</span>
                   <div className="text-xs text-muted">{s.shipping_name ?? s.name ?? ""} 〒{s.shipping_postal ?? ""} {s.shipping_address ?? "発送先未登録"} {s.shipping_phone ?? ""} &lt;{s.email}&gt; ・ 当選 {formatDateTime(s.created_at)}</div></div>
                 <form action={shipOripaDrawAction}><input type="hidden" name="id" value={s.id} /><button className="btn !py-1 text-xs">発送済みにする</button></form>
               </div>
@@ -100,7 +100,7 @@ export default async function AdminOripaPage({ searchParams }: { searchParams: P
                 {p.prizes.map((z) => (
                   <tr key={z.id}>
                     <td className="py-1.5 whitespace-nowrap font-bold">{RARITY_LABEL[z.rarity]}</td>
-                    <td className="py-1.5">{z.name} <span className="text-xs text-muted">{KIND_LABEL[z.kind]} ・ 参考 {yen(z.ref_price)}{z.ref_note ? `（${z.ref_note}）` : ""}{z.image_url ? " ・ 画像あり" : ""}</span></td>
+                    <td className="py-1.5">{z.name} <span className="text-xs text-muted">{KIND_LABEL[z.kind]} ・ 参考 {yen(z.ref_price)}{z.ref_note ? `（${z.ref_note}）` : ""}{z.image_url ? " ・ 画像あり" : ""}</span>{z.options && <div className="text-xs text-accent-2">🎁 選べる賞: {z.options}</div>}</td>
                     <td className="py-1.5 text-right tnum whitespace-nowrap">残 {z.count_left}/{z.count_total}本</td>
                     <td className="py-1.5 text-right">
                       {z.count_left === z.count_total && <form action={deleteOripaPrizeAction}><input type="hidden" name="id" value={z.id} /><input type="hidden" name="package_id" value={p.id} /><button className="text-xs text-muted underline">削除</button></form>}
@@ -120,6 +120,7 @@ export default async function AdminOripaPage({ searchParams }: { searchParams: P
               <label className="md:col-span-4 flex items-center gap-2 text-xs text-muted">実物写真（JPEG/PNG/WebP・8MBまで。本番では必ず添付）<input name="image" type="file" accept="image/jpeg,image/png,image/webp" className="input" /></label>
               <input name="image_url" className="input md:col-span-3" placeholder="または画像URL（任意）" />
               <input name="ref_note" className="input md:col-span-7" placeholder="参考価格の根拠（例: 当店の落札 2026-11 3件の中央値 ／ 他店落札の目安 2026-11 n6 中央値）" />
+              <input name="options" className="input md:col-span-7" placeholder="選べる賞にする場合: 選択肢を「／」で区切る（例: ラメ系 1ペア／めだかのエサ 100g×2／産卵床セット）。当選者が発送依頼のときに1つ選びます" />
             </form>
           </section>
         );

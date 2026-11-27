@@ -360,6 +360,8 @@ const COLUMN_MIGRATIONS: [table: string, column: string, ddl: string][] = [
   ["oripa_draws", "prize_id", "INTEGER REFERENCES oripa_prizes(id)"],
   ["oripa_draws", "kind", "TEXT NOT NULL DEFAULT 'medaka'"],
   ["oripa_orders", "shipping_yen", "INTEGER NOT NULL DEFAULT 0"],
+  ["oripa_prizes", "options", "TEXT NOT NULL DEFAULT ''"],
+  ["oripa_draws", "choice", "TEXT"],
   ["oripa_prizes", "ref_note", "TEXT NOT NULL DEFAULT ''"],
   ["oripa_prizes", "ref_note", "TEXT NOT NULL DEFAULT ''"],
 ];

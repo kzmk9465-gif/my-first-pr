@@ -57,7 +57,11 @@ export async function shipAllOripaAction(formData: FormData): Promise<void> {
   const user = await getCurrentUser();
   if (!user) redirect("/login?next=/oripa");
   const ids = String(formData.get("ids") ?? "").split(",").map(Number).filter((n) => Number.isInteger(n) && n > 0);
-  await requestShipping(user.id, ids);
+  // 選べる賞は choice_<当選ID> で選択肢が来る
+  const choices: Record<number, string> = {};
+  for (const id of ids) { const c = formData.get(`choice_${id}`); if (typeof c === "string" && c) choices[id] = c; }
+  const r = await requestShipping(user.id, ids, choices);
+  if (!r.ok) redirect(`/oripa?error=${encodeURIComponent(r.error)}`);
   revalidatePath("/oripa");
   revalidatePath("/mypage");
   redirect("/oripa?shipped=1");
