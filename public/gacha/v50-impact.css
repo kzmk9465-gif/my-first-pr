@@ -92,12 +92,13 @@
 @media(prefers-reduced-motion:reduce){.v50-shock,.v50-flash,.v50-punch,.opening-reveal,.opening-reveal:before,.opening-reveal:after,.descent-title strong,#strike b,.push-anticipation strong,#miss strong,#screen[data-phase=miss]:after,.v50-drop,.rainbow-break strong,.rainbow-break:after,.push-anticipation.v50-beat:after,.push-anticipation.v50-beat strong{animation:none!important;transform:none!important}.v50-shock,.v50-flash{display:none}}
 
 /* ===== 見出しのフェード(親 .descent-title)を v50 の長さに合わせる ===== */
-:is([data-scene=rift],[data-phase=rift]) [data-freeze-theme=fire] .descent-title{animation-duration:4s}
-:is([data-scene=rift],[data-phase=rift]) [data-freeze-theme=blessing] .descent-title{animation-duration:5s}
-:is([data-scene=rift],[data-phase=rift]) [data-freeze-theme=dragon] .descent-title{animation-duration:3s}
-:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=fire] .descent-title{animation-duration:6s}
-:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=blessing] .descent-title{animation-duration:5s}
-:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=dragon] .descent-title{animation-duration:7s}
+/* 亀裂 5.2秒: 見出しは緊張の間に出る。エネルギー 4.8秒: 静寂2.4秒は何も出さず、爆発(2.4秒)で見出しを叩きつける */
+:is([data-scene=rift],[data-phase=rift]) .descent-title{animation-duration:5.2s!important}
+:is([data-scene=gather],[data-phase=gather]) .descent-title{animation:energyTitle 2.4s 2.4s both!important}
+:is([data-scene=gather],[data-phase=gather]) .descent-title strong{animation-delay:2.55s!important}
+:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=dragon] .freeze-dragon{animation:dragonSummon 4.8s both!important}
+:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=dragon] .dragon-eyes{display:flex!important;animation:v50EyesHold 2.4s both!important}
+@keyframes v50EyesHold{0%,80%{opacity:1}100%{opacity:0}}
 .descent-title strong{animation-name:v50TitleHitSkew;animation-delay:.9s}
 :is([data-scene=gather],[data-phase=gather]) .descent-title strong{animation-name:v50TitleHitSkew;animation-delay:.9s}
 @keyframes v50TitleHitSkew{0%{opacity:0;transform:skew(-7deg) scale(2.4) translateY(-30px);filter:blur(8px) brightness(2)}38%{opacity:1;transform:skew(-7deg) scale(.93) translateY(5px);filter:blur(0) brightness(1.4)}52%{transform:skew(-7deg) scale(1.04) translate(-3px,-3px)}64%{transform:skew(-7deg) scale(.99) translate(3px,1px)}76%{transform:skew(-7deg) scale(1.01) translateX(-1px)}100%{opacity:1;transform:skew(-7deg) scale(1);filter:blur(0) brightness(1)}}
@@ -139,12 +140,15 @@ html,body{overflow-x:hidden}
 [data-freeze-theme=blessing] .freeze-theme-art{perspective:900px;--lid:38%}
 [data-freeze-theme=blessing] .freeze-chest-base{clip-path:inset(var(--lid) 0 0 0)}
 [data-freeze-theme=blessing] .freeze-chest-lid{clip-path:inset(0 0 calc(100% - var(--lid)) 0);transform-origin:50% var(--lid);backface-visibility:hidden}
-:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=blessing] .freeze-chest-lid{animation:v50LidOpen 5s linear both!important;filter:brightness(1.1) drop-shadow(0 0 25px #ffcf65)}
-:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=blessing] .freeze-chest-base{animation:v50ChestGlow 5s linear both!important}
+:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=blessing] .freeze-chest-lid{animation:v50LidOpen 4.8s linear both!important;filter:brightness(1.1) drop-shadow(0 0 25px #ffcf65)}
+:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=blessing] .freeze-chest-base{animation:v50ChestGlow 4.8s linear both!important}
 [data-freeze-theme=dragon] .chest-burst,[data-freeze-theme=fire] .chest-burst{display:none}
 [data-freeze-theme=blessing] .chest-burst{display:none;position:absolute;left:15%;width:70%;top:calc(8% + 65% * var(--lid) / 100% - 6%);height:14%;border-radius:50%;background:radial-gradient(ellipse at 50% 60%,#fffdf0 0%,#ffe9a8cc 35%,#ffcf6a44 65%,transparent 80%);mix-blend-mode:screen;filter:blur(6px);transform:scaleY(.2);opacity:0}
-:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=blessing] .chest-burst{display:block;animation:v50ChestBurst 5s linear both}
-@keyframes v50LidOpen{0%,42%{transform:rotateX(0deg)}46%{transform:rotateX(6deg)}58%{transform:rotateX(-78deg)}66%{transform:rotateX(-100deg)}72%{transform:rotateX(-92deg)}100%{transform:rotateX(-96deg)}}
-@keyframes v50ChestGlow{0%,40%{filter:brightness(.6) drop-shadow(0 0 12px #c79b4d)}60%{filter:brightness(1.25) drop-shadow(0 0 30px #ffd56a)}100%{filter:brightness(1.6) drop-shadow(0 0 48px #ffe3a1)}}
-@keyframes v50ChestBurst{0%,44%{opacity:0;transform:scaleY(.2)}52%{opacity:1;transform:scaleY(1) scaleX(1.1)}70%{opacity:1;transform:scaleY(2.2) scaleX(1.4)}100%{opacity:.9;transform:scaleY(3) scaleX(1.6)}}
+:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=blessing] .chest-burst{display:block;animation:v50ChestBurst 4.8s linear both}
+@keyframes v50LidOpen{0%,49%{transform:rotateX(0deg)}53%{transform:rotateX(6deg)}64%{transform:rotateX(-78deg)}72%{transform:rotateX(-100deg)}78%{transform:rotateX(-92deg)}100%{transform:rotateX(-96deg)}}
+@keyframes v50ChestGlow{0%,48%{filter:brightness(.6) drop-shadow(0 0 12px #c79b4d)}66%{filter:brightness(1.25) drop-shadow(0 0 30px #ffd56a)}100%{filter:brightness(1.6) drop-shadow(0 0 48px #ffe3a1)}}
+@keyframes v50ChestBurst{0%,50%{opacity:0;transform:scaleY(.2)}58%{opacity:1;transform:scaleY(1) scaleX(1.1)}76%{opacity:1;transform:scaleY(2.2) scaleX(1.4)}100%{opacity:.9;transform:scaleY(3) scaleX(1.6)}}
 @media(prefers-reduced-motion:reduce){:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=blessing] .freeze-chest-lid{animation:none!important;transform:rotateX(-96deg)}.chest-burst{animation:none!important;opacity:.8;transform:scaleY(2)}}
+
+/* 祝福の宝箱の明るさ(v49の chestBlessing 5s)も 4.8秒に */
+:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=blessing] .freeze-chest{animation-duration:4.8s}

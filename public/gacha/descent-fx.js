@@ -215,15 +215,18 @@
   raf = 0;
   if (!['rift', 'gather'].includes(phase) || document.hidden) return;
   const durations = DUR()[theme] || [4, 6], gather = phase === 'gather', duration = durations[gather ? 1 : 0];
-  const t = reduced ? duration * .65 : Math.max(0, Math.min((now - since) / 1000, duration)), p = t / duration, R = Math.max(w, h) * .8;
+  const tRaw = reduced ? duration * .65 : Math.max(0, Math.min((now - since) / 1000, duration));
+  /* エネルギー場面の前半(音の静寂)は息を潜め、climaxAt で爆発する。p は「爆発の進み」(静寂中は 0) */
+  const calmLen = gather ? Math.max(0, ((window.V50 && V50.climaxAt) || 7.6) - durations[0]) : 0;
+  const t = tRaw, calm = gather && t < calmLen, p = gather ? Math.max(0, (t - calmLen) / Math.max(.1, duration - calmLen)) : t / duration, R = Math.max(w, h) * .8;
   const dt = Math.min(.05, (now - (draw.last || now)) / 1000); draw.last = now;
-  const intensity = gather ? .45 + p * .55 : p * .55;
+  const intensity = gather ? (calm ? .2 + .1 * Math.sin(t * 4) : .45 + p * .55) : p * .55;
 
   c.clearRect(0, 0, w, h);
   c.fillStyle = '#010205'; c.fillRect(0, 0, w, h);
   c.save();
   /* 画面の揺れ: 進むほど強く(最大±7px)。#world は触らず canvas だけを揺らす。 */
-  const shake = reduced ? 0 : (gather ? 1.5 + p * 5.5 : p * 2);
+  const shake = reduced ? 0 : (gather ? (calm ? .6 : 1.5 + p * 5.5) : p * 2);
   c.translate(w * .5 + (Math.random() - .5) * shake * 2, h * .48 + (Math.random() - .5) * shake * 2);
 
   if (theme === 'dragon') {
@@ -241,7 +244,7 @@
    c.globalCompositeOperation = 'lighter';
    /* 亀裂の先端から枝分かれする稲妻。進行で本数が増える。 */
    if (!reduced) {
-    const bolts = gather ? 3 + Math.floor(p * 3) : 1 + Math.floor(p * 2);
+    const bolts = gather ? (calm ? 1 : 3 + Math.floor(p * 3)) : 1 + Math.floor(p * 2);
     LightningFX.draw(c, { time: t, radius: R * (.3 + intensity * .45), color: '#8ff0ff', power: .5 + intensity * .5, count: bolts, reduced });
     const epoch = Math.floor(t / .92);
     if (epoch !== lastBolt) { lastBolt = epoch; emitSparks(0, 0, 10 + Math.floor(intensity * 25), 195, 220 + intensity * 200, .6); notify('bolt', { intensity }); }
@@ -286,16 +289,16 @@
     c.save(); c.translate(x, y); c.rotate(a + t * .5); c.globalAlpha = Math.sin(v * Math.PI) * .8; c.fillStyle = j % 3 ? '#ffe0a0' : '#ffc4d8';
     c.beginPath(); c.ellipse(0, 0, 3, 7, 0, 0, Math.PI * 2); c.fill(); c.restore();
    }
-   if (!reduced && now - lastSpark > 140 - intensity * 100) { lastSpark = now; emitSparks(0, 0, 4 + Math.floor(intensity * 10), 48, 120 + intensity * 160, .9); }
+   if (!reduced && !calm && now - lastSpark > 140 - intensity * 100) { lastSpark = now; emitSparks(0, 0, 4 + Math.floor(intensity * 10), 48, 120 + intensity * 160, .9); }
    /* 蓋が開いたら(gather 45%〜)、箱の中から光の柱と光線が噴き出す */
-   if (gather && p > .45) {
-    const k = Math.min(1, (p - .45) / .3), ly = -h * .1;
+   if (gather && p > .1) {
+    const k = Math.min(1, (p - .1) / .3), ly = -h * .1;
     const col = c.createLinearGradient(0, ly, 0, ly - h * .9);
     col.addColorStop(0, 'rgba(255,250,220,' + (.85 * k) + ')'); col.addColorStop(.35, 'rgba(255,225,140,' + (.45 * k) + ')'); col.addColorStop(1, 'rgba(255,210,120,0)');
     c.fillStyle = col; c.beginPath(); c.moveTo(-w * .16 * k, ly); c.lineTo(w * .16 * k, ly); c.lineTo(w * .55 * k, ly - h * .95); c.lineTo(-w * .55 * k, ly - h * .95); c.closePath(); c.fill();
     for (let j = 0; j < 14; j++) { const a = -Math.PI / 2 + (j - 6.5) * .16 + Math.sin(t * 2 + j) * .04; c.strokeStyle = 'rgba(255,240,190,' + (.12 + .2 * k) + ')'; c.lineWidth = 2 + (j % 3) * 2; c.beginPath(); c.moveTo(0, ly); c.lineTo(Math.cos(a) * h, ly + Math.sin(a) * h); c.stroke(); }
     glow(0, ly, 60 + k * 120, 48, .5 + k * .4, 100);
-    if (!reduced && now - lastSpark > 50) { lastSpark = now; emitSparks(0, ly, 6 + Math.floor(k * 10), 48, 260 + k * 200, 1.1); }
+    if (!reduced && !calm && now - lastSpark > 50) { lastSpark = now; emitSparks(0, ly, 6 + Math.floor(k * 10), 48, 260 + k * 200, 1.1); }
    }
    c.globalAlpha = 1;
    if (gather) { glow(0, 0, 40 + p * 90, 45, .35 + p * .4, 95); glow(0, 0, 14 + p * 24, 50, .8, 100); }
@@ -318,7 +321,7 @@
    c.globalCompositeOperation = 'source-over';
    drawCracks(R, p, gather, { edge: '#ffb070', core: '#fff6e0', dark: '#120502', inner: '#ff7a1e', shard: '#ffd9b0', glowHue: 28, sat: 100, sparkHue: 30, width: 1.3 });
    c.globalCompositeOperation = 'lighter';
-   if (!reduced && now - lastSpark > 120 - intensity * 90) { lastSpark = now; emitSparks(0, 0, 5 + Math.floor(intensity * 14), 28, 160 + intensity * 220, .8); }
+   if (!reduced && !calm && now - lastSpark > 120 - intensity * 90) { lastSpark = now; emitSparks(0, 0, 5 + Math.floor(intensity * 14), 28, 160 + intensity * 220, .8); }
    if (gather) {
     for (let j = 0; j < 30; j++) {
      const x = (j / 29 - .5) * w, y = h * .35, reach = (.2 + p * .6) * h * (.4 + (j % 7) / 10);
@@ -366,7 +369,7 @@
    const hue = theme === 'dragon' ? 195 : theme === 'blessing' ? 45 : 280;
    glow(0, 0, 60 + p * 100, hue, .18 + p * .18, 90); glow(0, 0, 15 + p * 40, theme === 'dragon' ? 180 : 45, .5, 100);
    /* 最後の0.5秒: 画面全体が白く弾ける(解放) */
-   const flare = Math.max(0, (p - .9) / .1);
+   const flare = Math.max(0, (p - .8) / .2); /* 爆発の最後の0.5秒で白く弾ける(虹色の直前) */
    if (flare) { glow(0, 0, Math.max(w, h) * flare, theme === 'dragon' ? 190 : theme === 'blessing' ? 48 : 30, flare * .9, 90); if (!flareSent) { flareSent = true; emitSparks(0, 0, 90, theme === 'dragon' ? 195 : theme === 'blessing' ? 48 : 30, 420, 1.2); notify('flare', { theme }); } }
   }
   c.restore();
