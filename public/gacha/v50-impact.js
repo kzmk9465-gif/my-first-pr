@@ -15,8 +15,33 @@
  if (!host) return;
  /* ① 本番(播州オクからの呼び出し)用: URL ?rank=SS|S|A|B|C [&effect=auto|normal|chance|premium|freeze|revival|preview] で等級を固定する。
     固定時は「もう一度見る」で同じ景品を再生し、デモの設定欄は隠す。デモ(指定なし)は毎回抽選し直すので「もう一度試す」。 */
+ /* 本番: ?draw=<当選記録ID> → /api/oripa/draws/<ID>(ログイン本人の記録だけ返る)を読み、等級・景品ID・名前・画像をその記録から出す。
+    URLの ?rank= は本番では無視する(利用者が書き換えても景品は変わらない)。記録が読めなければ再生しない。 */
+ V50.draw = null;
+ const drawParam = new URLSearchParams(location.search).get('draw');
+ const parentDraw = () => { try { return window.parent !== window && window.parent.V50 ? window.parent.V50.draw : null; } catch { return null; } };
+ V50.record = () => V50.draw || parentDraw();
+ function applyFixedUi(rank, effect) {
+  const sel = document.querySelector('#rank'), eff = document.querySelector('#effect'), settings = document.querySelector('#settings');
+  if (eff) { eff.value = ['auto', 'normal', 'chanceB', 'chanceA', 'chanceS', 'preview', 'premium', 'revival', 'freeze'].includes(effect) ? effect : 'auto'; eff.dispatchEvent(new Event('change')); }
+  if (sel && !sel.disabled) sel.value = rank;
+  if (settings) settings.hidden = true;
+  for (const b of document.querySelectorAll('#again,#replay')) b.textContent = 'もう一度見る ↻';
+ }
+ if (drawParam && /^\d+$/.test(drawParam) && host.id !== 'screen') { /* isFire はこの後で定義されるので直接判定 */
+  const start = document.querySelector('#start'), note = document.querySelector('.demo-note');
+  if (start) { start.disabled = true; start.textContent = '当選記録を読み込み中…'; }
+  fetch('/api/oripa/draws/' + drawParam, { credentials: 'same-origin', cache: 'no-store' }).then(async (r) => {
+   const j = await r.json().catch(() => ({ ok: false, error: '読み込みに失敗しました。' }));
+   if (!r.ok || !j.ok) throw new Error(j.error || ('HTTP ' + r.status));
+   V50.draw = j; applyFixedUi(j.rank, 'auto');
+   if (note) note.textContent = j.package.name + '｜' + j.label + '「' + j.prize.name + '」（記録ID ' + j.id + '）の演出を再生します';
+   if (start) { start.disabled = false; start.innerHTML = '演出をスタート <span>▶</span>'; }
+  }).catch((e) => { if (note) note.textContent = '当選記録を読めませんでした（' + e.message + '）。播州オクにログインして、ご自身の当選から開いてください。'; });
+ }
  V50.fixed = (() => {
   const q = new URLSearchParams(location.search), rank = (q.get('rank') || '').toUpperCase(), effect = q.get('effect') || 'auto';
+  if (drawParam) return null; /* 本番モードでは ?rank= を根拠にしない */
   if (!['SS', 'S', 'A', 'B', 'C'].includes(rank)) return null;
   const sel = document.querySelector('#rank'), eff = document.querySelector('#effect'), settings = document.querySelector('#settings');
   if (eff) { eff.value = ['auto', 'normal', 'chanceB', 'chanceA', 'chanceS', 'preview', 'premium', 'revival', 'freeze'].includes(effect) ? effect : 'auto'; eff.dispatchEvent(new Event('change')); }
@@ -196,6 +221,14 @@
   for (const el of document.querySelectorAll('.congrats-message')) el.textContent = big ? 'おめでとう！' : rank + '賞 獲得';
  }
 
+ /* ---------------- 本番の記録を画面に写す(等級ラベル・景品名・画像) ---------------- */
+ function showRecord(scene) {
+  const rec = V50.record(); if (!rec) return;
+  const label = rec.label + ' 獲得', img = rec.prize.image_url || null;
+  if (scene === 'reveal') { const a = document.querySelector('#reveal-rank'); if (a) a.textContent = label; const im = document.querySelector('#reveal .prize-card img'); if (im && img) im.src = img; const t = document.querySelector('#reveal-title'); if (t) t.textContent = rec.prize.name; }
+  if (scene === 'result') { const a = document.querySelector('#result-rank'); if (a) a.textContent = label; const nme = document.querySelector('#result-name'); if (nme) nme.textContent = rec.prize.name; const im = document.querySelector('#result .result-art img'); if (im && img) im.src = img; const p = document.querySelector('#result p'); if (p) p.textContent = rec.package.name + '｜記録ID ' + rec.id + '｜発送依頼は播州オクのくじページから'; }
+  if (scene === 'win' || scene === 'complete') { const a = document.querySelector('#prize-reveal>strong'); if (a) a.textContent = label; const h = document.querySelector('#prize-reveal h2'); if (h) h.textContent = rec.prize.name; const p = document.querySelector('#prize-reveal p'); if (p) p.textContent = rec.package.name + '｜記録ID ' + rec.id; const im = document.querySelector('#prize-reveal img'); if (im && img) im.src = img; const sp = document.querySelector('#prize-reveal span'); if (sp) sp.textContent = '発送依頼は播州オクのくじページから'; }
+ }
  /* ---------------- 場面の変化を見張る ---------------- */
  let prev = '';
  function onScene(name) {
@@ -215,9 +248,10 @@
    case 'miss': A.miss(); host.classList.remove('v50-drop'); void host.offsetWidth; host.classList.add('v50-drop'); break;
    case 'strike': case 'awaken': case 'shatter': case 'swing': A.shing(1); shock(kind, 1); break;
    case 'rush': shock('rainbow', .8); break;
-   case 'reveal': case 'win': { const r = rankOf(); applyCongrats(r); if (['SS', 'S', 'A'].includes(r)) { A.fanfare(r); shock(r === 'SS' ? 'rainbow' : kind, r === 'SS' ? 1.2 : .8); } break; }
+   case 'reveal': case 'win': { const r = rankOf(); applyCongrats(r); showRecord(name); if (['SS', 'S', 'A'].includes(r)) { A.fanfare(r); shock(r === 'SS' ? 'rainbow' : kind, r === 'SS' ? 1.2 : .8); } break; }
    case 'arrive': case 'draw': shock(kind, .6); break;
    case 'result': { /* ⑤ SS/S賞の結果画面に余韻を残す(龍・祝福=メイン画面) */
+    showRecord(name);
     if (isFire) break; const r = host.dataset.rank || '';
     const res = document.querySelector('#result'); if (!res) break;
     host.classList.toggle('v50-glory', r === 'SS' || r === 'S');
@@ -231,6 +265,7 @@
     if (r === 'SS') shock('rainbow', 1); else if (r === 'S') shock('gold', .8);
     break; }
    case 'home': host.classList.remove('v50-glory'); break;
+   case 'complete': showRecord('complete'); break;
    case 'tunnel': case 'seal': if (!isFire) delete host.dataset.rank; /* 前回の等級を引きずらない */ later(380, () => { if (prev === name) shock(kind, .9); }); break;
   }
  }

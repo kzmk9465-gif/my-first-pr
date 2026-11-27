@@ -84,7 +84,7 @@ export default async function OripaPage({ searchParams }: { searchParams: Promis
             {wins.map((w) => (
               <li key={w.id} className="py-2 flex items-center justify-between gap-2">
                 <span><span className="badge badge-star mr-1">{RARITY_LABEL[w.rarity]}</span>{w.prize_name}</span>
-                <span className="text-xs text-muted">{formatDateTime(w.created_at)}</span>
+                <span className="text-xs text-muted whitespace-nowrap"><a className="underline text-accent-2 mr-2" href={`/gacha/index.html?draw=${w.id}`} target="_blank" rel="noreferrer">演出を見る</a>{formatDateTime(w.created_at)}</span>
               </li>
             ))}
           </ul>

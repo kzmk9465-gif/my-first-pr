@@ -361,3 +361,26 @@ export function recentOwnSales(limit = 30): OwnSale[] {
     .prepare("SELECT o.listing_id, l.title, o.price, o.created_at AS paid_at FROM orders o JOIN listings l ON l.id = o.listing_id WHERE o.status IN ('paid','shipped','completed') ORDER BY o.created_at DESC LIMIT ?")
     .all(limit) as OwnSale[];
 }
+
+/** 演出ページ用: 本人の確定済み当選記録(景品ID・名前・画像まで)。URLの等級指定は使わず、この記録だけを根拠にする。 */
+export type DrawRecord = {
+  id: number; rank: "SS" | "S" | "B" | "C"; rarity: Rarity; label: string; status: string; created_at: string;
+  prize: { id: number | null; name: string; kind: PrizeKind; image_url: string | null; ref_price: number };
+  package: { slug: string; name: string };
+};
+const GACHA_RANK: Record<Rarity, DrawRecord["rank"]> = { S: "SS", A: "S", B: "B", C: "C" };
+export function drawRecord(userId: number, drawId: number): DrawRecord | null {
+  const row = getDb()
+    .prepare(
+      "SELECT d.id, d.rarity, d.prize_name, d.kind, d.ref_price, d.status, d.created_at, d.prize_id, d.package_id, p.image_url AS prize_image, pk.name AS package_name FROM oripa_draws d LEFT JOIN oripa_prizes p ON p.id = d.prize_id LEFT JOIN oripa_packages pk ON pk.slug = d.package_id WHERE d.id = ? AND d.user_id = ?",
+    )
+    .get(drawId, userId) as
+    | { id: number; rarity: Rarity; prize_name: string; kind: PrizeKind; ref_price: number; status: string; created_at: string; prize_id: number | null; package_id: string; prize_image: string | null; package_name: string | null }
+    | undefined;
+  if (!row) return null;
+  return {
+    id: row.id, rank: GACHA_RANK[row.rarity] ?? "C", rarity: row.rarity, label: RARITY_LABEL[row.rarity] ?? row.rarity, status: row.status, created_at: row.created_at,
+    prize: { id: row.prize_id, name: row.prize_name, kind: row.kind, image_url: row.prize_image, ref_price: row.ref_price },
+    package: { slug: row.package_id, name: row.package_name ?? row.package_id },
+  };
+}

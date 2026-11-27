@@ -51,6 +51,8 @@ export default function GachaModal({ pkgName, drawCount, drawId, results, left, 
 
   if (results === null) return null;
   const best = results.reduce<Rarity>((a, r) => (RANK[r.rarity] > RANK[a] ? r.rarity : a), "C");
+  // 演出ページは「確定した当選記録のID」だけを受け取り、記録をサーバーから読んで再生する(等級や景品はURLで渡さない)
+  const bestResult = results.reduce((a, r) => (RANK[r.rarity] > RANK[a.rarity] ? r : a), results[0]);
   const [c1, c2] = HUES[best];
   const rainbow = best === "S";
   const unshipped = results.filter((r) => r.status === "won").length;
@@ -112,6 +114,7 @@ export default function GachaModal({ pkgName, drawCount, drawId, results, left, 
             {error && <p className="text-danger text-sm mt-2">{error}</p>}
 
             <div className="mt-3 grid gap-2">
+              <a href={`/gacha/index.html?draw=${bestResult.id}`} target="_blank" rel="noreferrer" className="btn btn-outline w-full !py-2.5 text-center">🎬 一番良い当たりの演出を見る（{LABEL[bestResult.rarity]}）</a>
               {unshipped > 0 ? (
                 <button onClick={onShip} disabled={busy} className="btn w-full !py-2.5">🚚 当選品を発送依頼する（{unshipped}点）</button>
               ) : (
