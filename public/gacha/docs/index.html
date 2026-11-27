@@ -1,0 +1,89 @@
+<!doctype html><html lang="ja"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>播州くじ 演出の配線 デモ確認手順(アテナさん向け)</title>
+<style>body{margin:0;padding:20px max(16px,env(safe-area-inset-right)) 40px max(16px,env(safe-area-inset-left));font:15px/1.7 -apple-system,"Hiragino Sans","Yu Gothic",sans-serif;color:#1d2330;background:#fbfaf6;max-width:860px;margin-inline:auto}
+h1{font-size:22px;border-bottom:2px solid #c9a84a;padding-bottom:6px}h2{font-size:18px;margin-top:28px;border-left:5px solid #c9a84a;padding-left:10px}h3{font-size:16px}
+table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0;display:block;overflow-x:auto}th,td{border:1px solid #d9d4c5;padding:6px 8px;text-align:left;vertical-align:top}th{background:#f1ead6}
+code{background:#eee9db;padding:1px 5px;border-radius:3px;font-size:13px}a{color:#8a5a14;word-break:break-all}blockquote{border-left:4px solid #ddd;margin:8px 0;padding:4px 12px;color:#555}li{margin:3px 0}
+.foot{margin-top:36px;font-size:12px;color:#777}</style></head><body>
+<h1>播州くじ 演出の配線 — デモ(Render)での確認手順(2026-11-27 ゴッド)</h1>
+<h2>0. 先に明示: このデモで試しても実請求・本番在庫の減少は起きません</h2>
+<ul>
+<li>デモ = <a href="https://banshu-oku-demo.onrender.com">https://banshu-oku-demo.onrender.com</a> (Render の <code>banshu-oku-demo</code> サービス)。render.yaml で <strong>DEMO_MODE=1</strong>(認証コードを画面に表示・メール不要)と <strong>REQUIRE_APPROVAL=false</strong>(会員承認なしで即くじを試せる)。</li>
+<li>決済: <code>src/lib/oripa.ts</code> の oripaProvider() は DEMO_MODE=1 のとき必ず <strong>mock(テスト決済)</strong>。注文画面に「お試し環境のため…テスト決済で進みます。お金は動きません」と出て、「支払いを完了する（テスト）」を押すだけ。決済代行・カード・銀行振込は一切呼びません(mockPayOripaAction は provider が mock 以外なら何もしない)。</li>
+<li>在庫: デモの3つのくじ(播州極上ラメくじ／流星スペシャルくじ／朱龍プレミアムくじ)は seed-demo.ts が入れた<strong>デモ用の仮データ</strong>です。本番サービス(render.yaml の <code>banshu-oku</code>)はまだ作っておらず、本番DBも存在しません。デモで引いても減るのはデモ箱の口数だけで、実在の魚・本番の在庫は動きません。</li>
+<li>発送依頼を押しても、デモではお店側に通知する相手(ADMIN_EMAILS)を設定していないので、実際の発送作業は発生しません。</li>
+</ul>
+<h2>1. テスト用くじの直接URL</h2>
+<ul>
+<li>くじ一覧: <a href="https://banshu-oku-demo.onrender.com/oripa">https://banshu-oku-demo.onrender.com/oripa</a></li>
+<li>確認に使うくじ: <strong>流星スペシャルくじ</strong>(1口3,000円＋送料1,500円=4,500円、テスト決済なので請求なし)。一覧の2つ目。</li>
+<li>ログイン: <a href="https://banshu-oku-demo.onrender.com/login?next=/oripa">https://banshu-oku-demo.onrender.com/login?next=/oripa</a></li>
+<li>任意のメールアドレスを入れて「認証コードを送信」→ 画面に6桁の数字が出る(デモ設定)→ そのまま入力。初回は会員登録画面(氏名・住所・電話・生年月日は試験用の値でOK、18歳以上の生年月日が必要)。</li>
+</ul>
+<h2>2. 操作手順と、照合する3か所</h2>
+<ol>
+<li>ログイン後 /oripa で「流星スペシャルくじ」の口数を 1 にして「口を買う」→ 注文画面で「支払いを完了する（テスト）」。</li>
+<li>/oripa に戻ると「引ける口があります」→「1口引く」→ 球をタップして開封。</li>
+</ol>
+<ul>
+<li><strong>【抽選直後】</strong> 当選結果カードの「賞」と「景品名」を控える。下に「🎬 一番良い当たりの演出を見る（○賞）」が出る(リンク先は /gacha/index.html?draw=&lt;記録ID&gt;)。</li>
+</ul>
+<ol>
+<li>そのリンクを開く → 画面下に「流星スペシャルくじ｜○賞「景品名」（記録ID n）の演出を再生します」と出る → 「演出をスタート」。</li>
+</ol>
+<ul>
+<li><strong>【演出後】</strong> 当選画面の文字と結果画面の「○賞 獲得」「景品名」「記録ID」を、①と照合。「もう一度見る」で同じ記録を再生。</li>
+</ul>
+<ol>
+<li>/oripa の「発送依頼がまだの当選品」一覧にある「演出を見る」からもう一度開く。</li>
+</ol>
+<ul>
+<li><strong>【再表示後】</strong> 同じ記録ID・同じ賞・同じ景品名であることを照合。</li>
+</ul>
+<ol>
+<li>(任意)演出ページのURL末尾に <code>&amp;rank=SS</code> を付けて開いても、等級・景品は変わらない(本番モードでは ?rank= を無視)。</li>
+</ol>
+<ul>
+<li>画像について: デモのくじの景品には写真が登録されていないため、演出ページの魚は共通の仮画像(medaka.png)です。賞品に写真(image_url)を登録すると、その写真が出ます(ローカルの型は確認済み・写真付きの実データでの表示は未確認)。</li>
+</ul>
+<h2>3. ゴッドが同じ手順で確認した結果(2026-11-27 12:31〜12:36・デモ上)</h2>
+<table>
+<tr><th>会員</th><th>操作</th><th>結果</th></tr>
+<tr><td>A(test-a-gott@example.com)</td><td>流星スペシャル1口・テスト決済・1口引く</td><td><strong>B賞「みゆき系 お楽しみペア」 記録ID 1</strong>(抽選直後のカード)</td></tr>
+<tr><td>A</td><td>/gacha/index.html?draw=1</td><td>API 200: B賞／みゆき系 お楽しみペア／景品ID 7／流星スペシャルくじ。当選画面「B賞 獲得」「みゆき系 お楽しみペア」、結果画面「B賞 獲得」「みゆき系 お楽しみペア」「流星スペシャルくじ｜記録ID 1」=<strong>一致</strong></td></tr>
+<tr><td>A</td><td>当選一覧の「演出を見る」</td><td>リンク先 /gacha/index.html?draw=1(同じ記録)=<strong>一致</strong></td></tr>
+<tr><td>B(test-b-gott@example.com)</td><td>同じ手順で1口</td><td>B賞「みゆき系 お楽しみペア」 記録ID 2</td></tr>
+<tr><td><strong>B でログイン中に A の記録(ID 1)</strong></td><td>GET /api/oripa/draws/1</td><td><strong>404「この当選記録は見つかりません。」</strong></td></tr>
+<tr><td><strong>A でログインし直して B の記録(ID 2)</strong></td><td>GET /api/oripa/draws/2</td><td><strong>404</strong> ／ /gacha/index.html?draw=2 は「当選記録を読めませんでした」で再生ボタン無効</td></tr>
+<tr><td>未ログイン</td><td>GET /api/oripa/draws/1</td><td><strong>401</strong></td></tr>
+<tr><td>A</td><td>?draw=1&amp;rank=SS</td><td>等級は B のまま(ローカルで3回選んでも全部B・デモでも rankSel=B)</td></tr>
+</table>
+<p>ローカル(localhost)でも同じ検査を実施: A(ID1)・B(ID2)、A→B は 404、B→A は 404、本人は 200。</p>
+<ul>
+<li>デモの残り口数: 流星スペシャルくじ 40口→38口(A・Bの2口分)。デモ箱の仮データなので問題なし。</li>
+</ul>
+<h2>4. まだ確認していないこと</h2>
+<ul>
+<li>演出の通し再生(音を出して)は、ゴッドの確認環境では音が聴けない。iPhone実機も未確認。</li>
+<li>写真付きの景品での画像表示(デモの景品は写真なし)。</li>
+<li>本番サービス(banshu-oku)はまだ作っていない。作るときは DEMO_MODE を付けず、決済は bank(銀行振込・入金確認後に引ける)になる。</li>
+</ul>
+<h2>5. 追記(12:50): 残り2点の完了と、iPhone最終確認の案内</h2>
+<ul>
+<li>異なる景品写真での表示: ローカルのテスト箱で4賞に別々の写真を付け、会員Aの記録3件(B賞/S賞/C賞)で、当選画面のカードと結果画面の画像が記録の写真に切り替わることを確認(画像の読み込み完了まで実測)。写真の無い景品は共通の仮画像のまま。あわせて、本番モードの等級判定を画面の文字ではなくサーバーの記録から取るよう直した。</li>
+<li>再生できない場合の文言(「この記録は再生できません」)と上の修正は、播州オクのrepoにpush済み(13a0dd7)。Renderへの反映は手動デプロイ待ち(反映後に ?v=58 になる)。</li>
+<li>以後は機能追加を止める。</li>
+</ul>
+<h3>iPhoneでの最終確認(社長・アテナさん)</h3>
+<ol>
+<li>演出だけ(ログイン不要): <a href="https://banshu-oku-demo.onrender.com/gacha/index.html">https://banshu-oku-demo.onrender.com/gacha/index.html</a></li>
+</ol>
+<ul>
+<li>Safariで開き、音量を上げてマナーモードを解除 → 「演出をスタート」。炎／龍／祝福を1回ずつ。「演出を選んで試す」で フリーズのタイミング(6種)・通常・プレミア も切り替えられる。</li>
+<li>見る所: 開始の登場が重くないか／PUSHの煽りと押し心地／プチュン→暗転→亀裂→エネルギー→解放の流れが途切れないか(カクつき)／文字が画面からはみ出さないか／音が映像と合っているか、高音が出ているか(重低音だけに聞こえないか)／虹色メダカとおめでとうの収まり／結果画面の読みやすさ。</li>
+</ul>
+<ol>
+<li>本番の流れ(ログインあり): 上の §1〜§2 の手順を iPhone でそのまま(流星スペシャルくじ・テスト決済)。当選直後→演出→再表示の3か所が一致するか。</li>
+<li>気づいたことは「場面・機種・iOSのバージョン・何がどう」で送ってもらえれば、その順で直す。</li>
+</ol>
+<p class="foot">このページはMarkdown原本から自動生成。原本と添付: <a href="athena-guide-20261127.md">手順書(.md)</a> ／ <a href="changes-v50-20261127.md">変更内容(.md)</a> ／ <a href="banshu-medaka-gacha-v50-changed-files-20261127.zip">変更ファイル+音源+スクリプト(.zip 1.3MB)</a></p>
+</body></html>
