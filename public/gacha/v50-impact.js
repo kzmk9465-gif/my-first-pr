@@ -211,6 +211,7 @@
 
  /* ---------------- ランク別の祝福文(C/B賞に「おめでとう！」を出さない) ---------------- */
  function rankOf() {
+  const rec = V50.record(); if (rec) return rec.rank; /* 本番: 画面の文字ではなくサーバーの記録の等級 */
   if (isFire) return host.dataset.rank || 'SS';
   const m = (document.querySelector('#reveal-rank')?.textContent || '').match(/^(SS|S|A|B|C)/);
   return m ? m[1] : 'SS';
