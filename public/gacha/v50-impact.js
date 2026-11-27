@@ -9,8 +9,9 @@
   freezeDurations: { fire: [4, 6], dragon: [3, 7], blessing: [5, 5] },
   /* 参考音源の構造(秒・音の頭から): 0-5.2 緊張 / 5.2-7.5 静寂 / 7.5-12.6 最高潮(12.6で終わり=虹色の終わり) */
   bed: { lull: [5.2, 7.5], length: 12.6 },
-  /* 高域シェルフ(2.6kHz〜)のブースト量 dB。重低音偏重の緩和 */
-  airDb: 5,
+  /* 追加の音(上昇音・心拍・亀裂音・解放音など)と高域ブースト。既定OFF=音はCodex版と同じ(参考音源3本+元のBGM)。URLに ?sfx=1 で有効 */
+  sfx: new URLSearchParams(location.search).get('sfx') === '1',
+  airDb: new URLSearchParams(location.search).get('sfx') === '1' ? 5 : 0,
  };
 
  const host = document.querySelector('#stage,#screen');
@@ -65,7 +66,7 @@
   /* 通常は既存の score(GachaScore)を使う。検査用に src で差し替えられる(OfflineAudioContext など) */
   src: null,
   bus() { return this.src || (typeof score !== 'undefined' ? score : null); },
-  ok() { const s = this.bus(); return !!(s && s.ac && s.output && s.ac.state !== 'closed'); },
+  ok() { if (!V50.sfx && !this.src) return false; /* 追加の音は既定OFF(検査用の src 差し替え時は鳴らす) */ const s = this.bus(); return !!(s && s.ac && s.output && s.ac.state !== 'closed'); },
   get ac() { return this.bus().ac; },
   out() { return this.bus().output; },
   noiseBuf: null,
@@ -258,7 +259,8 @@
    case 'rainbow': shock('rainbow', 1.2); A.sparkle(14, 2.2); break;
    case 'pushtease': {
     const el = host.querySelector('.push-anticipation');
-    A.heartbeat(3.2, p => { if (!el) return; el.classList.remove('v50-beat'); void el.offsetWidth; el.classList.add('v50-beat'); el.style.setProperty('--beat', p.toFixed(2)); });
+    const beat = p => { if (!el) return; el.classList.remove('v50-beat'); void el.offsetWidth; el.classList.add('v50-beat'); el.style.setProperty('--beat', p.toFixed(2)); };
+    if (V50.sfx) A.heartbeat(3.2, beat); else { let at = 0; while (at < 3.05) { const p = at / 3.2; later(at * 1000, () => beat(p)); at += Math.max(.35, .86 - p * .55); } }
     break; }
    case 'push': A.pushAppear(); shock(kind, .8); break;
    case 'pushvoid': A.pushVoid(); break;
