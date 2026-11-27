@@ -15,7 +15,7 @@
 
  const art = document.createElement('div');
  art.className = 'freeze-theme-art';
- art.innerHTML = '<div class=dragon-eyes><i></i><i></i></div><img class=freeze-dragon src=real-dragon.png alt=""><img class=freeze-chest src=real-chest.png alt=""><div class=chest-light></div>';
+ art.innerHTML = '<div class=dragon-eyes><i></i><i></i></div><img class=freeze-dragon src=real-dragon.png alt=""><div class=chest-burst></div><img class="freeze-chest freeze-chest-base" src=real-chest.png alt=""><img class="freeze-chest freeze-chest-lid" src=real-chest.png alt=""><div class=chest-light></div>';
  layer.append(art);
 
  const c = canvas.getContext('2d'), reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
@@ -24,29 +24,48 @@
  let seed = 87031;
  const random = () => ((seed = (seed * 1664525 + 1013904223) >>> 0) / 4294967296);
 
- /* 亀裂の骨格は共通(11本+枝)。見た目(色・太さ・光)はテーマごとに変える。 */
+ /* 亀裂の骨格: 本線11本を中心から放射状に、角度を少しずつ揺らし、ときどき大きく折れる。
+    進むたびに確率で枝が出て、枝からさらに細い枝(2段)。幅は根元で太く先端で細い。 */
  const cracks = [];
- for (let k = 0; k < 11; k++) {
-  const angle = k * Math.PI * 2 / 11 + (random() - .5) * .3;
-  let x = 0, y = 0, pts = [[0, 0]];
-  for (let j = 1; j <= 14; j++) {
-   const r = j * .052, a = angle + (random() - .5) * .15;
-   x = Math.cos(a) * r; y = Math.sin(a) * r; pts.push([x, y]);
-   if (j > 2 && j % 3 === 0) {
-    let branch = [[x, y]], ba = a + (random() > .5 ? 1 : -1) * (.4 + random() * .7);
-    for (let n = 1; n < 5; n++) branch.push([x + Math.cos(ba) * n * .021 + (random() - .5) * .01, y + Math.sin(ba) * n * .021 + (random() - .5) * .01]);
-    cracks.push({ pts: branch, start: j / 22, width: .35 + random() * .4, branch: true });
+ function grow(x, y, angle, steps, step, width, depth, start) {
+  const pts = [[x, y]];
+  for (let j = 1; j <= steps; j++) {
+   angle += (random() - .5) * .55 + (random() < .14 ? (random() - .5) * 1.5 : 0);
+   const len = step * (.6 + random() * .8);
+   x += Math.cos(angle) * len; y += Math.sin(angle) * len; pts.push([x, y]);
+   if (depth > 0 && j > 1 && j < steps - 1 && random() < (depth === 2 ? .26 : .3)) {
+    const side = random() > .5 ? 1 : -1, bLen = 2 + Math.floor(random() * Math.max(2, (steps - j) * .55));
+    cracks.push(grow(x, y, angle + side * (.5 + random() * 1.0), bLen, step * .75, width * (depth === 2 ? .5 : .4), depth - 1, start + (j / steps) * .35 + random() * .05));
    }
   }
-  /* 本線の亀裂は rift の前半60%に散らして走らせる(音の「ピシッ」が1秒に固まらないように) */
-  cracks.push({ pts, start: (k / 11) * .55 + random() * .08, width: .7 + random() * .6, branch: false });
+  return { pts, start, width, branch: depth < 2 };
  }
+ for (let k = 0; k < 11; k++) {
+  const angle = k * Math.PI * 2 / 11 + (random() - .5) * .35;
+  cracks.push(grow(0, 0, angle, 24, .031, .75 + random() * .6, 2, (k / 11) * .55 + random() * .08));
+ }
+ /* 毛細の割れ: 中心付近の短い細い線(本線が走った後に見える) */
+ for (let k = 0; k < 18; k++) { const a = random() * Math.PI * 2, r = .05 + random() * .25; cracks.push(grow(Math.cos(a) * r, Math.sin(a) * r, a + (random() - .5) * 1.2, 3 + Math.floor(random() * 4), .02, .22 + random() * .15, 0, .25 + random() * .5)); }
  const dust = Array.from({ length: 260 }, () => ({ a: random() * Math.PI * 2, r: .12 + random() * .8, z: .2 + random() * .8, h: random() * 360, s: random() }));
 
  let theme = 'fire', phase = '', since = 0, raf = 0, w = 0, h = 0, sparks = [], fired = new Set(), lastBolt = -1, lastSpark = 0, flareSent = false;
 
+ /* 宝箱の蓋の継ぎ目: 画像の不透明部分を測り、その上から36%の位置を蓋の下端とする(要素内の%で CSS 変数 --lid に渡す) */
+ let lidMeasured = false;
+ function measureLid() {
+  const img = art.querySelector('.freeze-chest-base'); if (!img || !img.naturalWidth) return;
+  try {
+   let box = measureLid.box;
+   if (!box) { const cv = document.createElement('canvas'); cv.width = img.naturalWidth; cv.height = img.naturalHeight; const cx = cv.getContext('2d'); cx.drawImage(img, 0, 0); const px = cx.getImageData(0, 0, cv.width, cv.height).data; let top = cv.height, bottom = 0; for (let y = 0; y < cv.height; y += 2) for (let x = 0; x < cv.width; x += 4) if (px[(y * cv.width + x) * 4 + 3] > 40) { if (y < top) top = y; if (y > bottom) bottom = y; } box = measureLid.box = { top, bottom }; }
+   const elW = img.clientWidth, elH = img.clientHeight; if (!elW || !elH) return;
+   const sc = Math.min(elW / img.naturalWidth, elH / img.naturalHeight), offY = (elH - img.naturalHeight * sc) / 2;
+   const seam = offY + (box.top + (box.bottom - box.top) * .36) * sc;
+   art.style.setProperty('--lid', (seam / elH * 100).toFixed(2) + '%');
+   lidMeasured = true;
+  } catch (e) { art.style.setProperty('--lid', '38%'); }
+ }
  function resize() {
-  w = host.clientWidth; h = host.clientHeight;
+  w = host.clientWidth; h = host.clientHeight; measureLid();
   const d = Math.min(devicePixelRatio || 1, 1.5);
   canvas.width = w * d; canvas.height = h * d;
   c.setTransform(d, 0, 0, d, 0, 0);
@@ -87,7 +106,7 @@
  /* 共通の亀裂描画。style={edge,core,dark,glowHue,width} */
  /* 破片: 本線の亀裂に沿って置く小さな欠片(位置は固定・進行で外へ流れる) */
  const shards = [];
- for (const f of cracks) if (!f.branch) for (const idx of [3, 6, 9, 12]) shards.push({ f, idx, side: random() > .5 ? 1 : -1, size: 3 + random() * 6, rot: random() * 6.28, spin: (random() - .5) * 3 });
+ for (const f of cracks) if (!f.branch && f.pts.length > 14) for (const idx of [3, 7, 11, 15, 19]) shards.push({ f, idx, side: random() > .5 ? 1 : -1, size: 3 + random() * 6, rot: random() * 6.28, spin: (random() - .5) * 3 });
  /* 共通の亀裂描画。style={edge,core,dark,inner,shard,glowHue,width}
     幅=根元で太く先端で細く・区間ごとにうねる / 外側の柔らかい光 / 縁の影(右下へ) / 暗い溝 / 内部の強い光 / 白い芯 / 破片 */
  function drawCracks(R, p, gather, style) {
@@ -265,6 +284,16 @@
     c.beginPath(); c.ellipse(0, 0, 3, 7, 0, 0, Math.PI * 2); c.fill(); c.restore();
    }
    if (!reduced && now - lastSpark > 140 - intensity * 100) { lastSpark = now; emitSparks(0, 0, 4 + Math.floor(intensity * 10), 48, 120 + intensity * 160, .9); }
+   /* 蓋が開いたら(gather 45%〜)、箱の中から光の柱と光線が噴き出す */
+   if (gather && p > .45) {
+    const k = Math.min(1, (p - .45) / .3), ly = -h * .1;
+    const col = c.createLinearGradient(0, ly, 0, ly - h * .9);
+    col.addColorStop(0, 'rgba(255,250,220,' + (.85 * k) + ')'); col.addColorStop(.35, 'rgba(255,225,140,' + (.45 * k) + ')'); col.addColorStop(1, 'rgba(255,210,120,0)');
+    c.fillStyle = col; c.beginPath(); c.moveTo(-w * .16 * k, ly); c.lineTo(w * .16 * k, ly); c.lineTo(w * .55 * k, ly - h * .95); c.lineTo(-w * .55 * k, ly - h * .95); c.closePath(); c.fill();
+    for (let j = 0; j < 14; j++) { const a = -Math.PI / 2 + (j - 6.5) * .16 + Math.sin(t * 2 + j) * .04; c.strokeStyle = 'rgba(255,240,190,' + (.12 + .2 * k) + ')'; c.lineWidth = 2 + (j % 3) * 2; c.beginPath(); c.moveTo(0, ly); c.lineTo(Math.cos(a) * h, ly + Math.sin(a) * h); c.stroke(); }
+    glow(0, ly, 60 + k * 120, 48, .5 + k * .4, 100);
+    if (!reduced && now - lastSpark > 50) { lastSpark = now; emitSparks(0, ly, 6 + Math.floor(k * 10), 48, 260 + k * 200, 1.1); }
+   }
    c.globalAlpha = 1;
    if (gather) { glow(0, 0, 40 + p * 90, 45, .35 + p * .4, 95); glow(0, 0, 14 + p * 24, 50, .8, 100); }
   } else {
@@ -361,6 +390,7 @@
    theme = host.dataset.theme || 'fire';
    layer.dataset.freezeTheme = theme;
    if (phase === 'rift') { sparks = []; fired = new Set(); lastBolt = -1; flareSent = false; }
+   if (!lidMeasured) { const im = art.querySelector('.freeze-chest-base'); if (im) im.complete ? measureLid() : im.addEventListener('load', measureLid, { once: true }); }
    const text = { fire: ['灼熱崩壊', '炎神覚醒', 'INFERNO AWAKENING'], dragon: ['龍眼開眼', '雷龍降臨', 'THUNDER DRAGON'], blessing: ['祝福の封印', '奇跡の開花', 'GOLDEN BLESSING'] }[theme];
    const strong = title.querySelector('strong');
    strong.textContent = text[phase === 'rift' ? 0 : 1]; strong.dataset.text = strong.textContent;

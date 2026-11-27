@@ -13,6 +13,19 @@
 
  const host = document.querySelector('#stage,#screen');
  if (!host) return;
+ /* ① 本番(播州オクからの呼び出し)用: URL ?rank=SS|S|A|B|C [&effect=auto|normal|chance|premium|freeze|revival|preview] で等級を固定する。
+    固定時は「もう一度見る」で同じ景品を再生し、デモの設定欄は隠す。デモ(指定なし)は毎回抽選し直すので「もう一度試す」。 */
+ V50.fixed = (() => {
+  const q = new URLSearchParams(location.search), rank = (q.get('rank') || '').toUpperCase(), effect = q.get('effect') || 'auto';
+  if (!['SS', 'S', 'A', 'B', 'C'].includes(rank)) return null;
+  const sel = document.querySelector('#rank'), eff = document.querySelector('#effect'), settings = document.querySelector('#settings');
+  if (eff) { eff.value = ['auto', 'normal', 'chanceB', 'chanceA', 'chanceS', 'preview', 'premium', 'revival', 'freeze'].includes(effect) ? effect : 'auto'; eff.dispatchEvent(new Event('change')); }
+  if (sel && !sel.disabled) sel.value = rank;
+  if (settings) settings.hidden = true;
+  for (const b of document.querySelectorAll('#again,#replay')) b.textContent = 'もう一度見る ↻';
+  const note = document.querySelector('.demo-note'); if (note) note.textContent = '景品は確定しています（演出のみ再生）';
+  return { rank, effect };
+ })();
  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
  const isFire = host.id === 'screen';
  const themeOf = () => isFire ? 'fire' : (host.dataset.theme || 'fire');
