@@ -18,7 +18,7 @@ const patterns={
  dragon:{B:['龍眼発光','一珠点灯','水面の龍影'],A:['赤眼覚醒','二珠点灯','龍の咆哮'],S:['金龍降臨','三金珠点灯','黄金雷撃'],SS:['虹龍降臨','三虹珠共鳴','龍神覚醒']},
  theater:{B:['照明増灯','幕の予兆','銀の紙吹雪'],A:['赤い照明','二重開幕','金光の予兆'],S:['黄金の幕','金の紙吹雪','金のスポット'],SS:['虹の幕','虹の照明','祝福のフィナーレ']}
 };
-function cues(theme,run,variant='auto',random=Math.random){if(run.effect==='normal'||run.effect==='revival'||run.effect==='freeze'||run.effect==='preview')return [];const floors=run.floor==='SS'?['B','A','S']:['B','A','S'].slice(0,['B','A','S'].indexOf(run.floor)+1);return floors.map((floor,i)=>{const v=variant==='auto'?Math.min(2,Math.floor(random()*3)):Number(variant);return {floor,variant:v,label:patterns[theme][floor][v],at:(i+1)/(floors.length+1)}})}
+function cues(theme,run,variant='auto',random=Math.random){if(run.effect==='normal'||run.effect==='revival'||run.effect==='freeze'||effect==='preview')return [];const floors=run.floor==='SS'?['B','A','S']:['B','A','S'].slice(0,['B','A','S'].indexOf(run.floor)+1);return floors.map((floor,i)=>{const v=variant==='auto'?Math.min(2,Math.floor(random()*3)):Number(variant);return {floor,variant:v,label:patterns[theme][floor][v],at:(i+1)/(floors.length+1)}})}
 function timeline(theme,effect){let a=theme==='countdown'?[['intro',3.4],['count',9]]:theme==='dragon'?[['summon',4],['dragon',6]]:[['curtain',6],['celebrate',3]];
  if(effect==='freeze'){a=theme==='countdown'?[['intro',3.4],['count',.6]]:theme==='dragon'?[['summon',4]]:[['curtain',4]];a.push(['freezehold',.8],['shutoff',.65],['frozen',3.2],['awaken',4],['rainbow',3]);}
  else if(effect==='revival')a.push(['provisional',2.2],['blackout',1.5],['revive',2.8],['rainbow',4]);
