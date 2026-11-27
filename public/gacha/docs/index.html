@@ -5,6 +5,25 @@ table{border-collapse:collapse;width:100%;font-size:13.5px;margin:10px 0;display
 code{background:#eee9db;padding:1px 5px;border-radius:3px;font-size:13px}a{color:#8a5a14;word-break:break-all}blockquote{border-left:4px solid #ddd;margin:8px 0;padding:4px 12px;color:#555}li{margin:3px 0}
 .foot{margin-top:36px;font-size:12px;color:#777}</style></head><body>
 <h1>播州くじ 演出の配線 — デモ(Render)での確認手順(2026-11-27 ゴッド)</h1>
+<h2>★最新の状態(2026-11-27 13:05 時点・これが正)</h2>
+<p><strong>確認済み(ゴッドが実測)</strong></p>
+<ul>
+<li>本人確認: 当選記録APIは本人の記録だけ(他人の記録=404、未ログイン=401)。ローカルとデモ(Render)の両方で、テスト会員A/Bの双方向で実測。</li>
+<li>当選結果の固定: 演出ページは ?draw=記録ID でサーバーの記録だけを根拠に再生。?rank= は本番モードでは無視。「もう一度見る」は同じ記録(景品ID・名前・画像まで同じ)。</li>
+<li>抽選直後→演出後→再表示後の3か所で 賞・景品名・記録ID が一致(デモ: A=B賞「みゆき系 お楽しみペア」記録ID 1)。</li>
+<li>異なる景品写真: ローカルで賞ごとに別写真を付け、龍・祝福(メイン画面)はB賞/S賞/C賞の3記録で記録の写真が表示。<strong>炎テーマ(iframe)も確認済み(13:00)</strong>: S賞記録(real-dragon.png)で当選画面に「S賞 獲得」「テストS賞 三色ラメ ペア」「記録ID 3」と記録の写真が表示(画像の読み込み完了まで実測)。</li>
+<li>公開反映: 再生できない場合の文言「この記録は再生できません」と等級判定の修正(?v=58)はデモに反映済み(12:47 実測)。</li>
+<li>決済・在庫: デモは DEMO_MODE=1 で必ずテスト決済(請求なし)。くじはデモ用の仮データで、本番サービスとそのDBは存在しない。</li>
+</ul>
+<p><strong>未確認(残り)</strong></p>
+<ul>
+<li>iPhone実機での 演出の滑らかさ・音(聴感)・操作感。</li>
+<li>炎テーマの写真付き表示は「当選画面の場面に切り替えてデータの流れを確認」した。通し再生の中での実時間の表示は、確認環境(背景タブで描画が間引かれる)の都合で未実施。</li>
+<li>アテナさん側では資料の確認のみで、更新後の演出を再生しての評価は未実施。</li>
+</ul>
+<p><strong>今後の更新</strong>: 機能追加は止めている。iPhone確認で出た指摘のみ対応する。</p>
+<p>---</p>
+<h2>(以下は履歴: 作成時刻順。上の「最新の状態」と食い違う箇所は上が正)</h2>
 <h2>0. 先に明示: このデモで試しても実請求・本番在庫の減少は起きません</h2>
 <ul>
 <li>デモ = <a href="https://banshu-oku-demo.onrender.com">https://banshu-oku-demo.onrender.com</a> (Render の <code>banshu-oku-demo</code> サービス)。render.yaml で <strong>DEMO_MODE=1</strong>(認証コードを画面に表示・メール不要)と <strong>REQUIRE_APPROVAL=false</strong>(会員承認なしで即くじを試せる)。</li>
@@ -85,5 +104,10 @@ code{background:#eee9db;padding:1px 5px;border-radius:3px;font-size:13px}a{color
 <li>本番の流れ(ログインあり): 上の §1〜§2 の手順を iPhone でそのまま(流星スペシャルくじ・テスト決済)。当選直後→演出→再表示の3か所が一致するか。</li>
 <li>気づいたことは「場面・機種・iOSのバージョン・何がどう」で送ってもらえれば、その順で直す。</li>
 </ol>
+<h2>6. 追記(13:00): 炎テーマの写真付き表示</h2>
+<ul>
+<li>ローカル・会員A・S賞の記録(ID 3・写真 real-dragon.png)で炎テーマを選んで開始し、iframe内の当選画面(win)に切り替えて確認: 「S賞 獲得」「テストS賞 三色ラメ ペア」「テスト箱（ローカル確認用）｜記録ID 3」、画像=記録の写真(読み込み完了)。炎のiframeは親ページが読んだ記録を参照する型で、龍・祝福と同じ結果。</li>
+<li>残り: iPhone実機での 音・滑らかさ・操作感。</li>
+</ul>
 <p class="foot">このページはMarkdown原本から自動生成。原本と添付: <a href="athena-guide-20261127.md">手順書(.md)</a> ／ <a href="changes-v50-20261127.md">変更内容(.md)</a> ／ <a href="banshu-medaka-gacha-v50-changed-files-20261127.zip">変更ファイル+音源+スクリプト(.zip 1.3MB)</a></p>
 </body></html>
