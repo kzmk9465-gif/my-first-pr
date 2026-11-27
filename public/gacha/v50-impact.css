@@ -105,3 +105,30 @@
 :is([data-scene=draw],[data-phase=arrive]) .opening-reveal img{animation:openingPresent 1.8s ease-out both}
 @keyframes v50OpenSlam{0%{opacity:0;transform:scale(2.1) translateY(-40px);filter:brightness(2.5) blur(10px)}45%{opacity:1;transform:scale(.95) translateY(8px);filter:brightness(1.3) blur(0) drop-shadow(0 0 30px var(--opening-color))}62%{transform:scale(1.03) translateY(-3px)}100%{opacity:1;transform:scale(1) translateY(0);filter:brightness(1) drop-shadow(0 20px 25px #000) drop-shadow(0 0 22px var(--opening-color))}}
 @media(prefers-reduced-motion:reduce){.opening-reveal img{animation:none!important;opacity:1}}
+
+/* ===== ③ 文字: 正面は明るい金(暗い帯は細い線だけ)、暗さは側面と影へ ===== */
+#stage,#screen{--type-metal:linear-gradient(178deg,#fffbe6 0%,#fff3c0 20%,#ffe27a 38%,#e9b43e 45%,#fff6d4 50%,#ffdc66 66%,#d99a28 84%,#fff8df 100%);--type-edge:#fff4c8}
+#stage[data-theme=dragon]{--type-metal:linear-gradient(178deg,#fffbe6 0%,#fff3c0 20%,#ffe27a 38%,#e9b43e 45%,#fff6d4 50%,#ffdc66 66%,#d99a28 84%,#fff8df 100%);--type-edge:#fff4c8;--type-glow:#36ceff}
+#stage[data-theme=blessing]{--type-edge:#fff4c8}
+#stage[data-theme=dragon] :is(#strike b,#awakening h2,#reveal-title,.push-anticipation strong),[data-freeze-theme=dragon] .descent-title strong{filter:drop-shadow(0 2px #8a6a2a) drop-shadow(0 4px #5a4016) drop-shadow(0 6px #2b1e0c) drop-shadow(0 9px #0b0806) drop-shadow(0 12px 8px #000c) drop-shadow(0 0 18px #36ceff)}
+.descent-title strong{background-image:linear-gradient(172deg,#fff 0%,#e4f6ff 25%,#fff 32%,#8fb6d6 44%,#fff 48%,#bfe3ff 55%,#4a6f93 70%,#dbeefc 80%,#fff 88%,#7f9fbd 100%)}
+#reveal-title,#prize-reveal h2,.congrats-message,.rainbow-break strong{-webkit-text-stroke:1.2px #fff6d2}
+
+/* ===== ④ 開始画面の横スクロール: 魚の画像(幅115%)が #home からはみ出していた ===== */
+#home{overflow-x:hidden}
+html,body{overflow-x:hidden}
+
+/* ===== ⑤ SS/S賞の結果画面: 「おめでとう！」と金・虹の余韻(景品情報は読みやすいまま) ===== */
+.v50-result-congrats{display:none;margin:-4px 0 6px;text-align:center}
+#stage.v50-glory .v50-result-congrats{display:block}
+#stage.v50-glory #result h2{color:#fff2b8;text-shadow:0 0 30px #ffd34a,0 3px #8a5a14}
+.v50-result-fx{display:none;position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden}
+#stage.v50-glory .v50-result-fx{display:block}
+#stage.v50-glory #result{position:absolute;isolation:isolate}
+#stage.v50-glory #result>*{position:relative;z-index:1}
+.v50-result-fx i{position:absolute;left:50%;top:42%;width:150%;aspect-ratio:1;transform:translate(-50%,-50%);background:repeating-conic-gradient(from 0deg,#fff0 0deg 9deg,#ffd97a66 10deg 11deg,#fff0 12deg 20deg,#9be5ff55 21deg 22deg,#fff0 23deg 30deg,#ff9ad655 31deg 32deg,#fff0 33deg 40deg);mask:radial-gradient(circle,#000 10%,transparent 55%);-webkit-mask:radial-gradient(circle,#000 10%,transparent 55%);mix-blend-mode:screen;animation:v50Rays 14s linear infinite;opacity:.8}
+.v50-result-fx b{position:absolute;bottom:-4%;width:5px;height:5px;border-radius:50%;background:#fff3b0;box-shadow:0 0 8px 2px #ffd34a;opacity:0;animation:v50Float 5s linear infinite}
+.v50-result-fx b:nth-child(odd){background:#c9f0ff;box-shadow:0 0 8px 2px #7fd9ff}
+@keyframes v50Float{0%{transform:translateY(0) scale(.6);opacity:0}12%{opacity:.9}100%{transform:translateY(-105vh) translateX(var(--sway,0px)) scale(1.1);opacity:0}}
+#stage.v50-glory[data-tier=S] .v50-result-fx i{background:repeating-conic-gradient(from 0deg,#fff0 0deg 9deg,#ffd97a66 10deg 11deg,#fff0 12deg 30deg)}
+@media(prefers-reduced-motion:reduce){.v50-result-fx i,.v50-result-fx b{animation:none!important}.v50-result-fx b{display:none}}

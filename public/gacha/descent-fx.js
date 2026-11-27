@@ -85,24 +85,110 @@
  }
 
  /* 共通の亀裂描画。style={edge,core,dark,glowHue,width} */
+ /* 破片: 本線の亀裂に沿って置く小さな欠片(位置は固定・進行で外へ流れる) */
+ const shards = [];
+ for (const f of cracks) if (!f.branch) for (const idx of [3, 6, 9, 12]) shards.push({ f, idx, side: random() > .5 ? 1 : -1, size: 3 + random() * 6, rot: random() * 6.28, spin: (random() - .5) * 3 });
+ /* 共通の亀裂描画。style={edge,core,dark,inner,shard,glowHue,width}
+    幅=根元で太く先端で細く・区間ごとにうねる / 外側の柔らかい光 / 縁の影(右下へ) / 暗い溝 / 内部の強い光 / 白い芯 / 破片 */
  function drawCracks(R, p, gather, style) {
+  const widen = gather ? 1 + p * 1.6 : 1;
   for (const f of cracks) {
    let q = gather ? 1 : Math.max(0, Math.min(1, (p - f.start) * 2.5));
    if (!q) continue;
    if (!gather && !fired.has(f) && q > 0) { fired.add(f); if (!f.branch) { const tip = f.pts[1]; emitSparks(tip[0] * R, tip[1] * R, 14, style.sparkHue, 150, .7); notify('crack', { strength: f.width }); } }
-   const points = f.pts.slice(0, Math.max(2, Math.ceil(q * f.pts.length)));
-   c.globalAlpha = gather ? Math.max(.08, (1 - p) * .9) : .9;
-   for (const [offset, color, width] of [[2, style.dark, f.width * 2.6 * style.width], [-.8, style.edge, f.width * style.width], [0, style.core, f.width * .55 * style.width]]) {
-    c.beginPath();
-    points.forEach(([x, y], i) => i ? c.lineTo(x * R + offset, y * R) : c.moveTo(x * R + offset, y * R));
-    c.strokeStyle = color; c.lineWidth = width; c.stroke();
+   const n = Math.max(2, Math.ceil(q * f.pts.length)), pts = f.pts.slice(0, n);
+   const base = f.width * style.width * widen * (f.branch ? .7 : 1.25);
+   const wAt = (i) => base * (1.3 - .95 * (i / f.pts.length)) * (1 + .4 * Math.sin(i * 1.9 + f.width * 7));
+   const alpha = gather ? Math.max(.12, 1 - p * .75) : .95;
+   const path = (dx = 0, dy = 0) => { c.beginPath(); pts.forEach(([x, y], i) => i ? c.lineTo(x * R + dx, y * R + dy) : c.moveTo(x * R + dx, y * R + dy)); };
+   /* 外側の光(柔らかく2段) */
+   c.globalCompositeOperation = 'lighter'; c.lineCap = 'round'; c.lineJoin = 'round';
+   c.globalAlpha = alpha * (.07 + (gather ? p * .12 : 0)); c.strokeStyle = style.inner; c.lineWidth = base * 11; path(); c.stroke();
+   c.globalAlpha = alpha * .16; c.lineWidth = base * 5; path(); c.stroke();
+   /* 縁の影(右下に落ちる)と暗い溝: 区間ごとに幅を変える */
+   c.globalCompositeOperation = 'source-over';
+   for (let i = 1; i < n; i++) {
+    const w = wAt(i), [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+    c.globalAlpha = alpha * .85; c.strokeStyle = '#000'; c.lineWidth = w * 3.2; c.beginPath(); c.moveTo(x0 * R + 2.5, y0 * R + 2.5); c.lineTo(x1 * R + 2.5, y1 * R + 2.5); c.stroke();
+    c.globalAlpha = alpha; c.strokeStyle = style.dark; c.lineWidth = w * 2.6; c.beginPath(); c.moveTo(x0 * R, y0 * R); c.lineTo(x1 * R, y1 * R); c.stroke();
    }
-   const tip = points.at(-1);
-   if (!gather) glow(tip[0] * R, tip[1] * R, 16, style.glowHue, .6 * q, style.sat);
+   /* 内部の強い光と白い芯 */
+   c.globalCompositeOperation = 'lighter';
+   for (let i = 1; i < n; i++) {
+    const w = wAt(i), [x0, y0] = pts[i - 1], [x1, y1] = pts[i];
+    c.globalAlpha = alpha * .9; c.strokeStyle = style.inner; c.lineWidth = w * 1.5; c.beginPath(); c.moveTo(x0 * R, y0 * R); c.lineTo(x1 * R, y1 * R); c.stroke();
+    c.globalAlpha = alpha; c.strokeStyle = style.core; c.lineWidth = Math.max(.6, w * .55); c.beginPath(); c.moveTo(x0 * R, y0 * R); c.lineTo(x1 * R, y1 * R); c.stroke();
+   }
+   /* 縁の明るいハイライト(左上側)で厚みを出す */
+   c.globalCompositeOperation = 'source-over'; c.globalAlpha = alpha * .35; c.strokeStyle = style.edge; c.lineWidth = Math.max(.5, base * .4); path(-1.2, -1.2); c.stroke();
+   const tip = pts.at(-1);
+   if (!gather) { c.globalCompositeOperation = 'lighter'; glow(tip[0] * R, tip[1] * R, 18, style.glowHue, .7 * q, style.sat); }
   }
-  c.globalAlpha = 1;
+  /* 破片: 亀裂の縁から欠けた小片。進行で外へ流れ、回る */
+  c.globalCompositeOperation = 'source-over';
+  for (const s of shards) {
+   const q = gather ? 1 : Math.max(0, Math.min(1, (p - s.f.start) * 2.5)); if (q <= 0 || Math.ceil(q * s.f.pts.length) <= s.idx) continue;
+   const [x, y] = s.f.pts[s.idx], [px, py] = s.f.pts[s.idx - 1], a = Math.atan2(y - py, x - px) + s.side * Math.PI / 2;
+   const drift = (gather ? 6 + p * 34 : 2 + q * 3) * (1 + s.size / 9), gx = x * R + Math.cos(a) * drift, gy = y * R + Math.sin(a) * drift;
+   c.save(); c.translate(gx, gy); c.rotate(s.rot + (gather ? p * s.spin : 0)); c.globalAlpha = gather ? Math.max(0, 1 - p * .9) : .9;
+   const z = s.size * (gather ? 1 + p * .5 : 1);
+   c.beginPath(); c.moveTo(-z, -z * .4); c.lineTo(z * .6, -z); c.lineTo(z, z * .7); c.lineTo(-z * .5, z * .8); c.closePath();
+   const g = c.createLinearGradient(-z, -z, z, z); g.addColorStop(0, style.shard); g.addColorStop(.5, style.edge); g.addColorStop(1, style.dark);
+   c.fillStyle = g; c.fill(); c.strokeStyle = style.core; c.lineWidth = .6; c.stroke(); c.restore();
+  }
+  c.globalAlpha = 1; c.globalCompositeOperation = 'source-over';
  }
 
+ /* 祝福の封印。open=0 で無傷、open→1 で12枚の欠片に砕けて外へ飛ぶ。光源は左上からゆっくり回り、金属の反射が流れる。 */
+ const sealPieces = Array.from({ length: 12 }, (_, k) => ({ a0: k * Math.PI / 6, a1: (k + 1) * Math.PI / 6, fly: 70 + random() * 90, spin: (random() - .5) * 1.2, lift: random() * .5 }));
+ function drawSeal(Rs, open, t, p) {
+  const lightA = -2.2 + t * .35, ease = open * open * (3 - 2 * open);
+  const metal = (x0, y0, x1, y1, bright = 1) => { const g = c.createLinearGradient(x0, y0, x1, y1); g.addColorStop(0, '#5a3408'); g.addColorStop(.22, '#c9922f'); g.addColorStop(.42, bright > 1 ? '#fff8dc' : '#ffe9a6'); g.addColorStop(.5, '#fff4c8'); g.addColorStop(.62, '#d9a63a'); g.addColorStop(.85, '#7a4a10'); g.addColorStop(1, '#3f2405'); return g; };
+  for (const s of sealPieces) {
+   const mid = (s.a0 + s.a1) / 2, dx = Math.cos(mid) * s.fly * ease, dy = Math.sin(mid) * s.fly * ease - s.lift * 40 * ease;
+   c.save(); c.translate(dx, dy); c.rotate(s.spin * ease); c.globalAlpha = 1 - ease * .85;
+   const wedge = (r) => { c.beginPath(); c.moveTo(0, 0); c.arc(0, 0, r, s.a0, s.a1); c.closePath(); };
+   /* 厚み: 下にずらした暗い側面 */
+   wedge(Rs); c.save(); c.translate(0, 7); c.fillStyle = '#2b1706'; c.fill(); c.restore();
+   wedge(Rs); c.save(); c.translate(0, 4); c.fillStyle = '#6a4012'; c.fill(); c.restore();
+   /* 表面: 光源方向に応じた反射の帯 */
+   const lx = Math.cos(lightA) * Rs, ly = Math.sin(lightA) * Rs;
+   const facing = Math.cos(mid - lightA);
+   wedge(Rs); c.fillStyle = metal(lx, ly, -lx, -ly, facing > .3 ? 1.2 : 1); c.fill();
+   /* 彫刻: 同心の溝(影+ハイライト)、花弁の筋、縁の鋲 */
+   c.save(); wedge(Rs); c.clip();
+   for (const rr of [.34, .58, .8]) {
+    const r = Rs * rr; c.lineWidth = 2.2; c.strokeStyle = '#4a2a08'; c.beginPath(); c.arc(1, 1, r, 0, Math.PI * 2); c.stroke();
+    c.lineWidth = 1; c.strokeStyle = '#fff1c2'; c.beginPath(); c.arc(-.8, -.8, r, 0, Math.PI * 2); c.stroke();
+   }
+   for (const a of [s.a0 + Math.PI / 18, mid, s.a1 - Math.PI / 18]) {
+    const r0 = Rs * .36, r1 = Rs * .78;
+    c.lineWidth = 2; c.strokeStyle = '#4a2a08'; c.beginPath(); c.moveTo(Math.cos(a) * r0 + 1, Math.sin(a) * r0 + 1); c.quadraticCurveTo(Math.cos(a + .12) * (r0 + r1) / 2, Math.sin(a + .12) * (r0 + r1) / 2, Math.cos(a) * r1 + 1, Math.sin(a) * r1 + 1); c.stroke();
+    c.lineWidth = .9; c.strokeStyle = '#fff3c8'; c.beginPath(); c.moveTo(Math.cos(a) * r0 - 1, Math.sin(a) * r0 - 1); c.quadraticCurveTo(Math.cos(a + .12) * (r0 + r1) / 2, Math.sin(a + .12) * (r0 + r1) / 2, Math.cos(a) * r1 - 1, Math.sin(a) * r1 - 1); c.stroke();
+   }
+   const rv = Rs * .9, rx = Math.cos(mid) * rv, ry = Math.sin(mid) * rv;
+   c.beginPath(); c.arc(rx + 1, ry + 1, 4.5, 0, Math.PI * 2); c.fillStyle = '#3a2006'; c.fill();
+   const rg = c.createRadialGradient(rx - 1.5, ry - 1.5, 0, rx, ry, 4.5); rg.addColorStop(0, '#fff8dc'); rg.addColorStop(.6, '#d9a63a'); rg.addColorStop(1, '#6a4012');
+   c.beginPath(); c.arc(rx, ry, 4.2, 0, Math.PI * 2); c.fillStyle = rg; c.fill();
+   /* 流れる反射(細い明るい帯) */
+   c.globalCompositeOperation = 'lighter'; c.globalAlpha = (1 - ease) * .35 * Math.max(0, facing);
+   c.fillStyle = metal(lx * .6, ly * .6, -lx * .6, -ly * .6, 1.2); wedge(Rs); c.fill();
+   c.restore();
+   /* 縁(ベベル) */
+   c.globalAlpha = 1 - ease * .85; c.lineWidth = 5; c.strokeStyle = facing > 0 ? '#ffe7a8' : '#7a4a10'; c.beginPath(); c.arc(0, 0, Rs - 2.5, s.a0, s.a1); c.stroke();
+   c.lineWidth = 1.2; c.strokeStyle = '#3a2006'; c.beginPath(); c.arc(0, 0, Rs - 6, s.a0, s.a1); c.stroke();
+   c.restore();
+  }
+  /* 中央の飾り(紋章): 割れると光に飲まれる */
+  c.save(); c.globalAlpha = 1 - ease; const rb = Rs * .2;
+  const bg = c.createRadialGradient(-rb * .4, -rb * .4, 0, 0, 0, rb); bg.addColorStop(0, '#fff8dc'); bg.addColorStop(.55, '#d9a63a'); bg.addColorStop(1, '#5a3408');
+  c.beginPath(); c.arc(2, 3, rb, 0, Math.PI * 2); c.fillStyle = '#2b1706'; c.fill();
+  c.beginPath(); c.arc(0, 0, rb, 0, Math.PI * 2); c.fillStyle = bg; c.fill();
+  c.lineWidth = 1.4; c.strokeStyle = '#4a2a08'; c.beginPath(); for (let k = 0; k < 8; k++) { const a = k * Math.PI / 4 + t * .1, r1 = rb * .85, r2 = rb * .35; c.lineTo(Math.cos(a) * r1, Math.sin(a) * r1); c.lineTo(Math.cos(a + Math.PI / 8) * r2, Math.sin(a + Math.PI / 8) * r2); } c.closePath(); c.stroke();
+  c.restore();
+  /* 割れ目から漏れる光: open が進むほど中心が白く膨らむ */
+  c.globalCompositeOperation = 'lighter'; glow(0, 0, Rs * (.25 + ease * 1.1), 45, .25 + ease * .6, 95); c.globalCompositeOperation = 'source-over';
+ }
  function draw(now) {
   raf = 0;
   if (!['rift', 'gather'].includes(phase) || document.hidden) return;
@@ -129,7 +215,7 @@
    }
    for (let j = 0; j < 3; j++) { const a = t * .6 + j * Math.PI * 2 / 3, r = (gather ? 1 - p * .8 : 1) * w * .3; glow(Math.cos(a) * r, Math.sin(a) * r * .5, 19, 185, .7, 90); }
    c.globalCompositeOperation = 'source-over';
-   drawCracks(R, p, gather, { edge: '#9fe9ff', core: '#f4ffff', dark: '#061a2a', glowHue: 192, sat: 95, sparkHue: 195, width: 1.15 });
+   drawCracks(R, p, gather, { edge: '#c9f4ff', core: '#ffffff', dark: '#03111d', inner: '#5fdcff', shard: '#eafcff', glowHue: 192, sat: 95, sparkHue: 195, width: 1.3 });
    c.globalCompositeOperation = 'lighter';
    /* 亀裂の先端から枝分かれする稲妻。進行で本数が増える。 */
    if (!reduced) {
@@ -158,15 +244,9 @@
    /* ===== 祝福: 黄金の封印にひびが入り、裂け目から祝福の光が漏れ出す ===== */
    c.globalCompositeOperation = 'lighter';
    glow(0, -30, Math.min(w, h) * .8, 42, .2 + p * .25, 85);
-   for (let ring = 0; ring < 3; ring++) {
-    const r = (55 + ring * 40) * (gather ? 1 + p * .9 : 1);
-    c.save(); c.rotate((ring % 2 ? 1 : -1) * t * .13); c.strokeStyle = '#ffe3a5'; c.globalAlpha = .3 + p * .25; c.lineWidth = 1.2;
-    c.beginPath(); c.arc(0, 0, r, 0, Math.PI * 2); c.stroke();
-    for (let j = 0; j < 16; j++) { const a = j * Math.PI / 8; c.beginPath(); c.moveTo(Math.cos(a) * r, Math.sin(a) * r); c.lineTo(Math.cos(a) * (r + 8), Math.sin(a) * (r + 8)); c.stroke(); }
-    c.restore();
-   }
    c.globalCompositeOperation = 'source-over';
-   drawCracks(R, p, gather, { edge: '#ffd77a', core: '#fff8dc', dark: '#2a1605', glowHue: 42, sat: 95, sparkHue: 45, width: 1.1 });
+   drawSeal(Math.min(w, h) * .34, gather ? Math.min(1, p * 1.25) : 0, t, p);
+   drawCracks(R, p, gather, { edge: '#ffe9b0', core: '#fffaf0', dark: '#1d0f03', inner: '#ffc84a', shard: '#fff2c6', glowHue: 42, sat: 95, sparkHue: 45, width: 1.25 });
    c.globalCompositeOperation = 'lighter';
    /* 亀裂から漏れる光の筋(ゴッドレイ)。進行で長く・明るく。 */
    for (const f of cracks) {
@@ -204,7 +284,7 @@
    c.globalCompositeOperation = 'lighter';
    glow(0, 0, 110 + 100 * p, 25, .22 + intensity * .2, 90);
    c.globalCompositeOperation = 'source-over';
-   drawCracks(R, p, gather, { edge: '#ff9a4a', core: '#fff1d0', dark: '#1a0804', glowHue: 28, sat: 100, sparkHue: 30, width: 1.2 });
+   drawCracks(R, p, gather, { edge: '#ffb070', core: '#fff6e0', dark: '#120502', inner: '#ff7a1e', shard: '#ffd9b0', glowHue: 28, sat: 100, sparkHue: 30, width: 1.3 });
    c.globalCompositeOperation = 'lighter';
    if (!reduced && now - lastSpark > 120 - intensity * 90) { lastSpark = now; emitSparks(0, 0, 5 + Math.floor(intensity * 14), 28, 160 + intensity * 220, .8); }
    if (gather) {

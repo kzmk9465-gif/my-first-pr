@@ -204,6 +204,20 @@
    case 'rush': shock('rainbow', .8); break;
    case 'reveal': case 'win': { const r = rankOf(); applyCongrats(r); if (['SS', 'S', 'A'].includes(r)) { A.fanfare(r); shock(r === 'SS' ? 'rainbow' : kind, r === 'SS' ? 1.2 : .8); } break; }
    case 'arrive': case 'draw': shock(kind, .6); break;
+   case 'result': { /* ⑤ SS/S賞の結果画面に余韻を残す(龍・祝福=メイン画面) */
+    if (isFire) break; const r = host.dataset.rank || '';
+    const res = document.querySelector('#result'); if (!res) break;
+    host.classList.toggle('v50-glory', r === 'SS' || r === 'S');
+    if (!res.querySelector('.v50-result-fx')) {
+     const fx = document.createElement('div'); fx.className = 'v50-result-fx'; fx.setAttribute('aria-hidden', 'true');
+     fx.innerHTML = '<i></i>' + Array.from({ length: 14 }, (_, i) => '<b style="left:' + (4 + i * 6.8) + '%;animation-delay:' + (i * .37 % 5).toFixed(2) + 's;animation-duration:' + (4 + (i % 4)) + 's;--sway:' + ((i % 2 ? 1 : -1) * (10 + i * 2)) + 'px"></b>').join('');
+     res.prepend(fx);
+     const cg = document.createElement('div'); cg.className = 'congrats-message v50-result-congrats'; cg.textContent = 'おめでとう！';
+     const h2 = res.querySelector('#result-rank'); if (h2) h2.after(cg); else res.prepend(cg);
+    }
+    if (r === 'SS') shock('rainbow', 1); else if (r === 'S') shock('gold', .8);
+    break; }
+   case 'home': host.classList.remove('v50-glory'); break;
    case 'tunnel': case 'seal': if (!isFire) delete host.dataset.rank; /* 前回の等級を引きずらない */ later(380, () => { if (prev === name) shock(kind, .9); }); break;
   }
  }
