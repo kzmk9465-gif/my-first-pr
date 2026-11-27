@@ -46,7 +46,27 @@
    V50.draw = j; applyFixedUi(j.rank, 'auto');
    if (note) note.textContent = j.package.name + '｜' + j.label + '「' + j.prize.name + '」（記録ID ' + j.id + '）の演出を再生します';
    if (start) { start.disabled = false; start.innerHTML = '演出をスタート <span>▶</span>'; }
-  }).catch((e) => { if (note) note.textContent = '当選記録を読めませんでした（' + e.message + '）。播州オクにログインして、ご自身の当選から開いてください。'; if (start) { start.disabled = true; start.textContent = 'この記録は再生できません'; } });
+  }).catch((e) => { if (note) note.textContent = '当選記録を読めませんでした（' + e.message + '）。播州オクにログインして、ご自身の当選から開いてください。'; if (start) { start.disabled = true; start.textContent = 'この記録は再生できません'; } if (V50.app && start) { start.disabled = false; start.textContent = '景品を確認する →'; start.onclick = (ev) => { ev.preventDefault(); ev.stopImmediatePropagation(); V50.appPost('done'); }; } });
+ }
+
+ /* ===== 播州オクの中で流す(?app=1): くじを引いた直後に演出→「景品を確認する」で親画面へ戻る ===== */
+ V50.app = new URLSearchParams(location.search).get('app') === '1' || (() => { try { return window.parent !== window && !!window.parent.V50 && !!window.parent.V50.app; } catch { return false; } })();
+ const appPost = (action) => { try { const rec = V50.record(); window.top.postMessage({ type: 'banshu-gacha', action, draw: rec ? rec.id : null }, location.origin); } catch (e) { /* ignore */ } };
+ V50.appPost = appPost;
+ if (V50.app) {
+  document.documentElement.classList.add('v50-app');
+  /* 再生する等級は画面の選択肢ではなく、サーバーの記録だけから決める(記録が無ければ再生しない) */
+  if (window.GachaRules && GachaRules.choose && !GachaRules._v50app) { const orig = GachaRules.choose; GachaRules.choose = (effect, rank, random) => { const rec = V50.record(); if (!rec) throw new Error('当選記録がありません'); /* SS専用の種類(プレミア/復活/フリーズ/予告)は記録がSSのときだけ */ const e = (rec.rank !== 'SS' && ['premium', 'revival', 'freeze', 'preview'].includes(effect)) ? 'auto' : effect; const out = orig(e, rec.rank, random); if (out.rank !== rec.rank) throw new Error('等級が記録と一致しません'); return out; }; GachaRules._v50app = true; }
+  const back = document.querySelector('#back'), exit = document.querySelector('#exit');
+  if (back) { back.textContent = '景品を確認する →'; back.onclick = (e) => { e.preventDefault(); appPost('done'); }; }
+  if (exit) { exit.textContent = '× 景品へ'; exit.onclick = (e) => { e.preventDefault(); appPost('done'); }; }
+  if (host.id !== 'screen') {
+   /* テーマを選び直しても設定パネルを出さず、記録の文言を保つ(reel.js の syncThemeSettings の後に動く) */
+   for (const b of document.querySelectorAll('.theme-picker button')) b.addEventListener('click', () => { const s = document.querySelector('#settings'); if (s) s.hidden = true; const rec = V50.record(), note = document.querySelector('.demo-note'); if (rec && note) note.textContent = rec.package.name + '｜' + rec.label + '「' + rec.prize.name + '」の演出を再生します'; });
+   const brand = document.querySelector('#brand'); if (brand) brand.onclick = (e) => { e.preventDefault(); };
+   /* 炎(内側の枠)にも app=1 を渡す(親の読み込み順に頼らない) */
+   const ifr = document.getElementById('sword-embed'); if (ifr && !/[?&]app=1/.test(ifr.getAttribute('src') || '')) ifr.setAttribute('src', ifr.getAttribute('src') + '&app=1');
+  }
  }
  V50.fixed = (() => {
   const q = new URLSearchParams(location.search), rank = (q.get('rank') || '').toUpperCase(), effect = q.get('effect') || 'auto';
@@ -275,7 +295,7 @@
    case 'rush': shock('rainbow', .8); break;
    case 'reveal': case 'win': { const r = rankOf(); applyCongrats(r); showRecord(name); if (['SS', 'S', 'A'].includes(r)) { A.fanfare(r); shock(r === 'SS' ? 'rainbow' : kind, r === 'SS' ? 1.2 : .8); } break; }
    case 'arrive': case 'draw': shock(kind, .6); break;
-   case 'result': { /* ⑤ SS/S賞の結果画面に余韻を残す(龍・祝福=メイン画面) */
+   case 'result': { if (V50.app) appPost('result'); /* ⑤ SS/S賞の結果画面に余韻を残す(龍・祝福=メイン画面) */
     showRecord(name);
     if (isFire) break; const r = host.dataset.rank || '';
     const res = document.querySelector('#result'); if (!res) break;
@@ -290,7 +310,7 @@
     if (r === 'SS') shock('rainbow', 1); else if (r === 'S') shock('gold', .8);
     break; }
    case 'home': host.classList.remove('v50-glory'); break;
-   case 'complete': showRecord('complete'); break;
+   case 'complete': showRecord('complete'); if (V50.app) appPost('result'); break;
    case 'tunnel': case 'seal': if (!isFire) delete host.dataset.rank; /* 前回の等級を引きずらない */ later(380, () => { if (prev === name) shock(kind, .9); }); break;
   }
  }

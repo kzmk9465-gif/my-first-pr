@@ -160,3 +160,7 @@ html,body{overflow-x:hidden}
 /* ===== 一撃と同時に虹色メダカを出す(0.15秒で表示し切る・v50n) ===== */
 :is([data-scene=rainbow],[data-phase=rainbow]) .rainbow-core.rainbow-medaka{animation:v50FishHit 2.6s both!important}
 @keyframes v50FishHit{0%{transform:scale(.7);opacity:0}6%{transform:scale(1.06);opacity:1}16%{transform:scale(.98)}100%{transform:scale(1);opacity:1}}
+
+/* ===== 播州オクの中で流す(?app=1) ===== */
+.v50-app #settings,.v50-app .edition{display:none!important}
+.v50-app #result #back,.v50-app #complete #back{font-weight:900}

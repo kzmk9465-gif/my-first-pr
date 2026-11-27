@@ -13,7 +13,8 @@ const HUES: Record<Rarity, [string, string]> = {
 };
 const yen = (n: number) => `${n.toLocaleString("ja-JP")} 円`;
 
-type Step = "sealed" | "rising" | "reveal";
+/** cinema = 極彩降臨の演出(同じサイトの /gacha/ を枠内で再生) → reveal = 当選カード */
+type Step = "cinema" | "reveal";
 
 type Props = {
   pkgName: string;
@@ -31,37 +32,36 @@ type Props = {
 };
 
 /**
- * 開封演出。水鏡の球をタップ → 波紋 → 当選カード。
+ * 開封演出。抽選が確定したら「極彩降臨」(public/gacha)を枠内で再生し、演出の「景品を確認する」(またはとばす)で当選カードへ。
+ * 演出ページは当選記録IDだけを受け取り、等級・景品はサーバーの記録から読む(URLを書き換えても景品は変わらない)。
  * 当選品は必ず発送する（ポイント還元・買い戻しのボタンは置かない）。
  */
 export default function GachaModal({ pkgName, drawCount, drawId, results, left, busy, error, onClose, onShip, onAgain }: Props) {
-  const [step, setStep] = useState<Step>("sealed");
-  const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const reduce = useRef(false);
+  const [step, setStep] = useState<Step>("cinema");
+  const frame = useRef<HTMLIFrameElement | null>(null);
 
+  // 演出ページからの合図(同じサイトからだけ受け取る): done=景品を確認する／とじる
   useEffect(() => {
-    try { reduce.current = window.matchMedia("(prefers-reduced-motion: reduce)").matches; } catch { /* ignore */ }
+    const onMsg = (e: MessageEvent) => {
+      if (e.origin !== window.location.origin) return;
+      const d = e.data as { type?: string; action?: string } | null;
+      if (!d || d.type !== "banshu-gacha") return;
+      if (d.action === "done") setStep("reveal");
+    };
+    window.addEventListener("message", onMsg);
+    return () => window.removeEventListener("message", onMsg);
   }, []);
 
   // 新しい抽選が来たら演出を頭から
-  useEffect(() => {
-    setStep("sealed");
-    return () => { if (timer.current) clearTimeout(timer.current); };
-  }, [drawId]);
+  useEffect(() => { setStep("cinema"); }, [drawId]);
 
   if (results === null) return null;
   const best = results.reduce<Rarity>((a, r) => (RANK[r.rarity] > RANK[a] ? r.rarity : a), "C");
   // 演出ページは「確定した当選記録のID」だけを受け取り、記録をサーバーから読んで再生する(等級や景品はURLで渡さない)
   const bestResult = results.reduce((a, r) => (RANK[r.rarity] > RANK[a.rarity] ? r : a), results[0]);
-  const [c1, c2] = HUES[best];
-  const rainbow = best === "S";
+  const [c1] = HUES[best];
   const unshipped = results.filter((r) => r.status === "won").length;
-
-  const open = () => {
-    if (step !== "sealed") return;
-    setStep("rising");
-    timer.current = setTimeout(() => setStep("reveal"), reduce.current ? 250 : 1600);
-  };
+  const cinemaSrc = `/gacha/index.html?draw=${bestResult.id}&app=1`;
 
   return (
     <div className="fixed inset-0 z-[70] flex items-center justify-center p-4"
@@ -75,34 +75,14 @@ export default function GachaModal({ pkgName, drawCount, drawId, results, left, 
 
       {/* 中央演出 */}
       <div className="relative w-full max-w-lg text-center">
-        {step !== "reveal" ? (
-          <button type="button" onClick={open} className="w-full h-[62vh] flex flex-col items-center justify-center select-none" disabled={step === "rising"}>
-            {/* 水紋 */}
-            {step === "rising" && !reduce.current && [0, 1, 2].map((i) => (
-              <span key={i} className="pointer-events-none absolute rounded-full"
-                style={{ width: 160, height: 160, border: `2px solid ${c1}`, animation: `oripa-ripple 1.4s ease-out ${i * 0.22}s forwards`, filter: rainbow ? "saturate(1.4)" : "none" }} />
-            ))}
-            {step === "rising" && rainbow && !reduce.current && (
-              <span className="pointer-events-none absolute anim-hue" style={{ width: 260, height: 260, borderRadius: "999px",
-                background: "conic-gradient(from 0deg,#ff5f6d,#ffc371,#7DF9FF,#845ec2,#ff5f6d)", opacity: .55, filter: "blur(18px)" }} />
-            )}
-            {/* 光る水球 */}
-            <div className={`relative ${step === "sealed" ? "anim-float" : "anim-rise"}`}>
-              <div className={step === "sealed" ? "anim-pulse" : ""} style={{
-                width: 150, height: 150, borderRadius: "999px",
-                background: rainbow
-                  ? "conic-gradient(from 0deg,#ff5f6d,#ffc371,#7DF9FF,#845ec2,#ff5f6d)"
-                  : `radial-gradient(circle at 35% 30%, ${c2}, ${c1} 55%, #06121f)`,
-                boxShadow: `0 0 60px ${c1}, inset 0 0 40px rgba(255,255,255,.35)`,
-                filter: rainbow ? "saturate(1.3)" : "none",
-              }} />
-              <span className="absolute inset-0 flex items-center justify-center text-4xl font-black" style={{ color: "#05121f" }}>播</span>
-            </div>
-            <p className="mt-10 text-sm tracking-widest" style={{ color: step === "sealed" ? "var(--accent-2)" : c1 }}>
-              {step === "sealed" ? "画面をタップして開封" : rainbow ? "―― 極彩の光。特賞確定 ――" : best === "A" ? "―― 黄金の閃光。激アツ ――" : "―― 光が差し込む ――"}
-            </p>
-            <p className="mt-1 text-xs text-muted">{pkgName} ・ {drawCount}口</p>
-          </button>
+        {step === "cinema" ? (
+          <div className="fixed inset-0 z-[5]">
+            <iframe key={bestResult.id} ref={frame} src={cinemaSrc} title="極彩降臨 開封演出" allow="autoplay"
+              className="absolute inset-0 w-full h-full border-0" style={{ background: "#070914" }} />
+            <button type="button" onClick={() => setStep("reveal")}
+              className="absolute left-1/2 -translate-x-1/2 text-xs text-white/80 underline bg-black/50 rounded-full px-3 py-1"
+              style={{ bottom: "max(.6rem, env(safe-area-inset-bottom,0px))" }}>{pkgName} ・ {drawCount}口 ｜ 演出をとばして結果へ ≫</button>
+          </div>
         ) : (
           <div className="anim-in">
             <p className="text-xs tracking-[0.3em] text-muted">RESULT</p>
@@ -114,7 +94,7 @@ export default function GachaModal({ pkgName, drawCount, drawId, results, left, 
             {error && <p className="text-danger text-sm mt-2">{error}</p>}
 
             <div className="mt-3 grid gap-2">
-              <a href={`/gacha/index.html?draw=${bestResult.id}`} target="_blank" rel="noreferrer" className="btn btn-outline w-full !py-2.5 text-center">🎬 一番良い当たりの演出を見る（{LABEL[bestResult.rarity]}）</a>
+              <button type="button" onClick={() => setStep("cinema")} className="btn btn-outline w-full !py-2.5">🎬 もう一度演出を見る（{LABEL[bestResult.rarity]}）</button>
               {unshipped > 0 ? (
                 <button onClick={onShip} disabled={busy} className="btn w-full !py-2.5">🚚 当選品を発送依頼する（{unshipped}点）</button>
               ) : (
