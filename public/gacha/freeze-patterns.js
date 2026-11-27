@@ -7,8 +7,8 @@ function insert(list,kind,selected='auto',random=Math.random){
  const result=list.map(x=>x.slice());let at=result.findIndex(x=>x[0]===anchors[id]);if(at<0)throw Error('Missing freeze anchor');
  if(id==='opening')result[at][1]=.65;
  if(id==='charge')result[at][1]=.6;
- const durations=kind==='dragon'?[3,7]:kind==='blessing'?[5,5]:[4,6];
- const cut=kind==='fire'?[['shutdown',1.98],['black',3],['rift',durations[0]],['gather',durations[1]],['rainbow',2.6]]:[['hold',.2],['shutdown',1.98],['silence',3],['rift',durations[0]],['gather',durations[1]],['rainbow',2.6]];
+ const durations=kind==='dragon'?[3,5.8]:kind==='blessing'?[5,3.8]:[4,4.8]; /* v49b: 虹色を8.8秒に */
+ const cut=kind==='fire'?[['shutdown',1.98],['black',3],['rift',durations[0]],['gather',durations[1]],['rainbow',3.8]]:[['hold',.2],['shutdown',1.98],['silence',3],['rift',durations[0]],['gather',durations[1]],['rainbow',3.8]];
  if(id==='miss')cut.unshift(['miss',1.3]);
  // Freeze is the finale: do not resume charging, PUSH, or premium scenes.
  const prize=result.find(x=>x[0]===(kind==='fire'?'win':'reveal'));

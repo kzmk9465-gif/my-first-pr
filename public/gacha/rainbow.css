@@ -35,7 +35,7 @@
 .descent-title strong:after{content:attr(data-text);position:absolute;inset:0;background:linear-gradient(110deg,transparent 30%,#fff 48%,transparent 65%);background-size:300% 100%;background-clip:text;-webkit-background-clip:text;-webkit-text-fill-color:transparent;animation:metalSweep 2.8s ease-in-out infinite;-webkit-text-stroke:0}
 .descent-title em{display:block;margin-top:20px;font:700 13px 'Yu Mincho',serif;letter-spacing:4px;color:#e4e9f2;text-shadow:0 2px 5px #000}
 :is([data-scene=rift],[data-phase=rift]) .descent-title{animation:sealTitle 4s both}
-:is([data-scene=gather],[data-phase=gather]) .descent-title{animation:energyTitle 6s both}
+:is([data-scene=gather],[data-phase=gather]) .descent-title{animation:energyTitle 4.8s both}
 :is([data-scene=gather],[data-phase=gather]) .descent-title strong{background-image:linear-gradient(172deg,#fffbe2,#ffe89d 23%,#fff9dd 31%,#996126 43%,#fff5d1 47%,#ebc368 53%,#6d301b 66%,#ffe29c 78%,#fff4d7 87%,#b77931);-webkit-text-stroke:.7px #ffe5a3;filter:drop-shadow(0 3px #6e3617) drop-shadow(0 6px #391607) drop-shadow(0 10px #050104) drop-shadow(-5px 0 20px #d654b299) drop-shadow(5px 0 20px #5bcfea99)}
 .rainbow-break strong{font-size:clamp(42px,12vw,68px);letter-spacing:-2px;-webkit-text-stroke:1px #ffefc7;text-shadow:0 2px #9b6128,0 5px #64320f,0 9px #251108,0 12px 10px #000,0 0 26px #ffac4b}
 @keyframes sealTitle{0%,17%{opacity:0;transform:scale(1.8) translateY(-25px) rotateX(-20deg)}25%{opacity:1;transform:scale(.96) translateY(0)}31%,86%{opacity:1;transform:scale(1)}100%{opacity:0;transform:scale(1.09)}}
@@ -63,13 +63,14 @@
 .dragon-eyes i{width:24px;height:7px;background:#e5ffff;transform:rotate(-15deg);box-shadow:0 0 15px #49faff,0 0 35px #29b8ff;border-radius:70% 10%}
 .dragon-eyes i+i{transform:rotate(15deg)}
 :is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=dragon] .dragon-eyes{display:none}
-:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=dragon] .freeze-dragon{display:block;filter:drop-shadow(0 0 25px #29cfff);animation:dragonSummon 7s both}
+:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=dragon] .freeze-dragon{display:block;filter:drop-shadow(0 0 25px #29cfff);animation:dragonSummon 5.8s both}
 [data-freeze-theme=blessing] .freeze-chest{display:block;filter:brightness(.45) drop-shadow(0 0 12px #c79b4d);animation:chestSeal 5s both}
-:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=blessing] .freeze-chest{animation:chestBlessing 5s both}
-:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=blessing] .chest-light{display:block;position:absolute;inset:5% 8% 27%;background:radial-gradient(ellipse at 50% 65%,#fffdddcc,transparent 60%);mix-blend-mode:screen;animation:chestRadiance 5s both}
+:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=blessing] .freeze-chest{animation:chestBlessing 3.8s both}
+:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=blessing] .chest-light{display:block;position:absolute;inset:5% 8% 27%;background:radial-gradient(ellipse at 50% 65%,#fffdddcc,transparent 60%);mix-blend-mode:screen;animation:chestRadiance 3.8s both}
 [data-freeze-theme=dragon] .descent-title{animation-duration:3s}
-[data-scene=gather] [data-freeze-theme=dragon] .descent-title{animation-duration:7s}
+[data-scene=gather] [data-freeze-theme=dragon] .descent-title{animation-duration:5.8s}
 [data-freeze-theme=blessing] .descent-title{animation-duration:5s}
+:is([data-scene=gather],[data-phase=gather]) [data-freeze-theme=blessing] .descent-title{animation-duration:3.8s}
 @keyframes dragonEyes{0%,15%{opacity:0}50%,100%{opacity:1}}
 @keyframes dragonSummon{0%{opacity:0;transform:scale(.6) translateY(12%)}20%{opacity:.8}65%{opacity:1;transform:scale(1.08) translateY(-2%)}100%{opacity:1;transform:scale(1.2) translateY(-5%)}}
 @keyframes chestSeal{from{opacity:0;transform:scale(.8)}to{opacity:1;transform:scale(1)}}

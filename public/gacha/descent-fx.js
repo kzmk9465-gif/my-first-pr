@@ -18,7 +18,7 @@
  function resize(){w=host.clientWidth;h=host.clientHeight;const d=Math.min(devicePixelRatio||1,1.5);canvas.width=w*d;canvas.height=h*d;c.setTransform(d,0,0,d,0,0)}
  function glow(x,y,r,hue,alpha){const g=c.createRadialGradient(x,y,0,x,y,r);g.addColorStop(0,`hsla(${hue},65%,85%,${alpha})`);g.addColorStop(.18,`hsla(${hue},70%,60%,${alpha*.45})`);g.addColorStop(1,`hsla(${hue},70%,40%,0)`);c.fillStyle=g;c.fillRect(x-r,y-r,r*2,r*2)}
  function draw(now){raf=0;if(!['rift','gather'].includes(phase)||document.hidden)return;
-  const durations=theme==='dragon'?[3,7]:theme==='blessing'?[5,5]:[4,6],gather=phase==='gather',duration=durations[gather?1:0],t=reduced?duration*.65:Math.min((now-since)/1000,duration),p=t/duration,R=Math.max(w,h)*.8;
+  const durations=theme==='dragon'?[3,5.8]:theme==='blessing'?[5,3.8]:[4,4.8],gather=phase==='gather',duration=durations[gather?1:0],t=reduced?duration*.65:Math.min((now-since)/1000,duration),p=t/duration,R=Math.max(w,h)*.8;
   c.clearRect(0,0,w,h);c.fillStyle='#010205';c.fillRect(0,0,w,h);c.save();c.translate(w*.5,h*.48);
   // Fractured reflective plates lift off the screen as the seal breaks.
   if(theme!=='fire'){
