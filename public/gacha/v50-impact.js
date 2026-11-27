@@ -37,7 +37,7 @@
    V50.draw = j; applyFixedUi(j.rank, 'auto');
    if (note) note.textContent = j.package.name + '｜' + j.label + '「' + j.prize.name + '」（記録ID ' + j.id + '）の演出を再生します';
    if (start) { start.disabled = false; start.innerHTML = '演出をスタート <span>▶</span>'; }
-  }).catch((e) => { if (note) note.textContent = '当選記録を読めませんでした（' + e.message + '）。播州オクにログインして、ご自身の当選から開いてください。'; });
+  }).catch((e) => { if (note) note.textContent = '当選記録を読めませんでした（' + e.message + '）。播州オクにログインして、ご自身の当選から開いてください。'; if (start) { start.disabled = true; start.textContent = 'この記録は再生できません'; } });
  }
  V50.fixed = (() => {
   const q = new URLSearchParams(location.search), rank = (q.get('rank') || '').toUpperCase(), effect = q.get('effect') || 'auto';
