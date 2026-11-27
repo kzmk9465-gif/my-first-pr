@@ -58,7 +58,7 @@
   /* 再生する等級は画面の選択肢ではなく、サーバーの記録だけから決める(記録が無ければ再生しない) */
   if (window.GachaRules && GachaRules.choose && !GachaRules._v50app) { const orig = GachaRules.choose; GachaRules.choose = (effect, rank, random) => { const rec = V50.record(); if (!rec) throw new Error('当選記録がありません'); /* 種類は常に「おまかせ」: チャンス/プレミア等の下限(floor)で等級が記録より上がるのを防ぐ */ const out = orig('auto', rec.rank, random); if (out.rank !== rec.rank) throw new Error('等級が記録と一致しません'); return out; }; GachaRules._v50app = true; }
   const back = document.querySelector('#back'), exit = document.querySelector('#exit');
-  if (back) { back.textContent = '景品を確認する →'; back.onclick = (e) => { e.preventDefault(); appPost('done'); }; }
+  if (back) { back.textContent = '景品を確認する →'; back.onclick = (e) => { e.preventDefault(); appPost('done'); }; /* 戻るボタンを一番上の大きなボタンにし、「もう一度」は小さく */ const again = document.querySelector('#again,#replay'); if (again && again.parentNode) { again.parentNode.insertBefore(back, again); back.classList.add('primary'); again.classList.remove('primary'); } }
   if (exit) { exit.textContent = '× 景品へ'; exit.onclick = (e) => { e.preventDefault(); appPost('done'); }; }
   if (host.id !== 'screen') {
    /* テーマを選び直しても設定パネルを出さず、記録の文言を保つ(reel.js の syncThemeSettings の後に動く) */

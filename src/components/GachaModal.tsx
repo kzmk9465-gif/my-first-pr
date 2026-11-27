@@ -38,6 +38,7 @@ type Props = {
  */
 export default function GachaModal({ pkgName, drawCount, drawId, results, left, busy, error, onClose, onShip, onAgain }: Props) {
   const [step, setStep] = useState<Step>("cinema");
+  const [ended, setEnded] = useState(false); // 演出が結果画面に着いたら「とばす」を消す
   const frame = useRef<HTMLIFrameElement | null>(null);
 
   // 演出ページからの合図(同じサイトからだけ受け取る): done=景品を確認する／とじる
@@ -46,6 +47,7 @@ export default function GachaModal({ pkgName, drawCount, drawId, results, left, 
       if (e.origin !== window.location.origin) return;
       const d = e.data as { type?: string; action?: string } | null;
       if (!d || d.type !== "banshu-gacha") return;
+      if (d.action === "result") setEnded(true);
       if (d.action === "done") setStep("reveal");
     };
     window.addEventListener("message", onMsg);
@@ -53,7 +55,7 @@ export default function GachaModal({ pkgName, drawCount, drawId, results, left, 
   }, []);
 
   // 新しい抽選が来たら演出を頭から
-  useEffect(() => { setStep("cinema"); }, [drawId]);
+  useEffect(() => { setStep("cinema"); setEnded(false); }, [drawId]);
 
   if (results === null) return null;
   const best = results.reduce<Rarity>((a, r) => (RANK[r.rarity] > RANK[a] ? r.rarity : a), "C");
@@ -79,9 +81,9 @@ export default function GachaModal({ pkgName, drawCount, drawId, results, left, 
           <div className="fixed inset-0 z-[5]">
             <iframe key={bestResult.id} ref={frame} src={cinemaSrc} title="極彩降臨 開封演出" allow="autoplay"
               className="absolute inset-0 w-full h-full border-0" style={{ background: "#070914" }} />
-            <button type="button" onClick={() => setStep("reveal")}
+            {!ended && <button type="button" onClick={() => setStep("reveal")}
               className="absolute left-1/2 -translate-x-1/2 text-xs text-white/80 underline bg-black/50 rounded-full px-3 py-1"
-              style={{ bottom: "max(.6rem, env(safe-area-inset-bottom,0px))" }}>{pkgName} ・ {drawCount}口 ｜ 演出をとばして結果へ ≫</button>
+              style={{ bottom: "max(.6rem, env(safe-area-inset-bottom,0px))" }}>{pkgName} ・ {drawCount}口 ｜ 演出をとばして結果へ ≫</button>}
           </div>
         ) : (
           <div className="anim-in">
