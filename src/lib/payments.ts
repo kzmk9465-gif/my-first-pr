@@ -22,6 +22,14 @@ export function paymentProvider(): "stripe" | "mock" {
   return siteConfig.stripe.secretKey ? "stripe" : "mock";
 }
 
+/**
+ * モック決済（画面で「支払い完了」を押すだけ）が許される環境か。
+ * 本番（NODE_ENV=production）では DEMO_MODE=1 のお試し環境だけ許す。くじ側（oripaProvider）と同じ考え方。
+ */
+export function mockPaymentAllowed(): boolean {
+  return process.env.NODE_ENV !== "production" || process.env.DEMO_MODE === "1";
+}
+
 export function getPayment(token: string): Payment | null {
   return (getDb().prepare("SELECT * FROM payments WHERE token = ?").get(token) as Payment | undefined) ?? null;
 }
@@ -40,8 +48,11 @@ export async function startCheckout(listingId: number, buyerId: number): Promise
   if (!order) return { ok: false, error: "取引が見つかりません。" };
   if (order.buyer_id !== buyerId) return { ok: false, error: "この取引の落札者ではありません。" };
   if (order.status !== "awaiting_payment") return { ok: false, error: "この取引はお支払い待ちではありません。" };
-  const amount = order.price + order.shipping_fee;
+  const seller = getDb().prepare("SELECT accepts_online FROM sellers WHERE id = ?").get(order.seller_id) as { accepts_online: number } | undefined;
+  if (!seller?.accepts_online) return { ok: false, error: "この出品者はオンライン決済を受け付けていません。銀行振込でお支払いください。" };
   const provider = paymentProvider();
+  if (provider === "mock" && !mockPaymentAllowed()) return { ok: false, error: "オンライン決済は準備中です。銀行振込でお支払いください。" };
+  const amount = order.price + order.shipping_fee;
   const token = genToken();
   const db = getDb();
 
