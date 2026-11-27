@@ -6,7 +6,11 @@
  'use strict';
  window.V50 = {
   /* フリーズ後の長さ(秒)。降臨の音(参考音源 descent-reference.mp3・12.6秒: 0-5.2秒 緊張 / 5.2-7.5秒 静寂 / 7.5秒〜 最高潮 / 11.8秒 解放)に合わせる */
-  freezeDurations: { fire: [5.2, 4.8], dragon: [5.2, 4.8], blessing: [5.2, 4.8] },
+  /* 虹色メダカが出る時刻(亀裂の開始から・秒)。音源の「ピュピピピピーン」(8.9〜9.45秒)に合わせる。ここを変えると下の長さが全部ついてくる */
+  rainbowAt: 8.8,
+  /* 亀裂 5.2秒(音の緊張) → エネルギー(静寂+爆発) → 虹色(音源の終わり 12.6秒まで) */
+  get freezeDurations() { const g = +(this.rainbowAt - 5.2).toFixed(2); return { fire: [5.2, g], dragon: [5.2, g], blessing: [5.2, g] }; },
+  get rainbowLen() { return +(12.6 - this.rainbowAt).toFixed(2); },
   /* 爆発(映像の山)の時刻: 亀裂の開始から 7.6秒 = 音の最高潮の立ち上がり */
   climaxAt: 7.6,
   /* 参考音源の構造(秒・音の頭から): 0-5.2 緊張 / 5.2-7.5 静寂 / 7.5-12.6 最高潮(12.6で終わり=虹色の終わり) */
