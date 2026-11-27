@@ -96,7 +96,7 @@ export default function GachaModal({ pkgName, drawCount, drawId, results, left, 
             {error && <p className="text-danger text-sm mt-2">{error}</p>}
 
             <div className="mt-3 grid gap-2">
-              <button type="button" onClick={() => setStep("cinema")} className="btn btn-outline w-full !py-2.5">🎬 もう一度演出を見る（{LABEL[bestResult.rarity]}）</button>
+              <button type="button" onClick={() => { setEnded(false); setStep("cinema"); }} className="btn btn-outline w-full !py-2.5">🎬 もう一度演出を見る（{LABEL[bestResult.rarity]}）</button>
               {unshipped > 0 ? (
                 <button onClick={onShip} disabled={busy} className="btn w-full !py-2.5">🚚 当選品を発送依頼する（{unshipped}点）</button>
               ) : (

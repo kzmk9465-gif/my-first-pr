@@ -96,7 +96,7 @@ export default async function OripaPage({ searchParams }: { searchParams: Promis
         <h2 className="font-bold text-accent-2 mb-1">遊び方</h2>
         <ol className="text-sm text-muted list-decimal pl-5 space-y-1">
           <li>くじを選んで口数を決め、「口を買う」。お支払い（銀行振込、またはお試し環境ではテスト決済）を済ませます。</li>
-          <li>入金の確認後、「引ける口があります」から引けます。水鏡の演出のあと当選品が出ます。</li>
+          <li>入金の確認後、「引ける口があります」から引けます。開封の演出（炎・龍・祝福から選べます）のあと当選品が出ます。演出はとばすこともできます。</li>
           <li>当選品は<strong className="text-foreground">発送依頼</strong>をすると、お店から発送します（生体は天候と状態を見て原則7日以内）。</li>
         </ol>
         <ul className="text-[11px] text-muted mt-3 space-y-0.5 list-disc pl-5">
