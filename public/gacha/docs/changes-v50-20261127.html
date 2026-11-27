@@ -111,5 +111,11 @@ code{background:#eee9db;padding:1px 5px;border-radius:3px;font-size:13px}a{color
 <li>同期(フリーズ長・静寂・解放の時刻)は参考音源の構造に合わせて作ってあるので、そのまま一致する。</li>
 <li>権利: 参考音源は動画から抽出したもので権利は未確認(社長注記: 動画由来=一律不可ではなく権利や許諾による)。公開範囲の判断は社長。</li>
 </ul>
+<h2>11/27 13:45 「演出と音声がずれる」(社長・iPhone)への対応(v50g ?v=60)</h2>
+<ul>
+<li>一番ありそうな原因=スマホで描画が重く映像が遅れる(音は実時間で進む)。対策=<strong>軽量モード</strong>(スマホ幅 or iPhone/iPad/Android or CPU4コア以下で自動ON): canvas解像度を等倍、亀裂の本線11→8本・区間24→18・枝分かれ2段→1段・毛細18→6本、火花上限420→160、粒・花びら95→48、破片5→3、色ずれ処理を省略。メイン画面とiframeのcanvasも等倍。</li>
+<li>確認表示: URL末尾に <strong>?debug=1</strong> を付けると左下に「場面／映像の経過秒／音の時計の経過秒／差／描画のフレーム間隔(fps)／音の状態／軽量ON-OFF」が出る。iPhoneで撮ってもらえれば、映像遅れ(fpsが低い)か音の時計の問題(差が増え続ける)かを切り分けられる。</li>
+<li>ゴッドの環境では iPhone の実測ができないため、効果は未確認。</li>
+</ul>
 <p class="foot">このページはMarkdown原本から自動生成。原本と添付: <a href="athena-guide-20261127.md">手順書(.md)</a> ／ <a href="changes-v50-20261127.md">変更内容(.md)</a> ／ <a href="banshu-medaka-gacha-v50-changed-files-20261127.zip">変更ファイル+音源+スクリプト(.zip 1.3MB)</a></p>
 </body></html>

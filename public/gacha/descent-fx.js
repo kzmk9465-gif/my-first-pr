@@ -19,6 +19,9 @@
  layer.append(art);
 
  const c = canvas.getContext('2d'), reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+ /* 軽量モード: スマホ幅 or CPUが少ない端末。線・火花・解像度を減らして描画が音に追いつくようにする */
+ const LITE = (window.V50 && V50.lite != null) ? !!V50.lite : (matchMedia('(max-width: 560px)').matches || (navigator.hardwareConcurrency || 8) <= 4 || /iPhone|iPad|Android/i.test(navigator.userAgent));
+ window.V50 = window.V50 || {}; V50.liteActive = LITE;
  const DUR = () => (window.V50 && V50.freezeDurations) || { fire: [4, 6], dragon: [3, 7], blessing: [5, 5] };
 
  let seed = 87031;
@@ -33,20 +36,20 @@
    angle += (random() - .5) * .55 + (random() < .14 ? (random() - .5) * 1.5 : 0);
    const len = step * (.6 + random() * .8);
    x += Math.cos(angle) * len; y += Math.sin(angle) * len; pts.push([x, y]);
-   if (depth > 0 && j > 1 && j < steps - 1 && random() < (depth === 2 ? .26 : .3)) {
+   if (depth > 0 && j > 1 && j < steps - 1 && random() < (depth === 2 ? (LITE ? .18 : .26) : (LITE ? .2 : .3))) {
     const side = random() > .5 ? 1 : -1, bLen = 2 + Math.floor(random() * Math.max(2, (steps - j) * .55));
     cracks.push(grow(x, y, angle + side * (.5 + random() * 1.0), bLen, step * .75, width * (depth === 2 ? .5 : .4), depth - 1, start + (j / steps) * .35 + random() * .05));
    }
   }
   return { pts, start, width, branch: depth < 2 };
  }
- for (let k = 0; k < 11; k++) {
+ for (let k = 0; k < (LITE ? 8 : 11); k++) {
   const angle = k * Math.PI * 2 / 11 + (random() - .5) * .35;
-  cracks.push(grow(0, 0, angle, 24, .031, .75 + random() * .6, 2, (k / 11) * .55 + random() * .08));
+  cracks.push(grow(0, 0, angle, LITE ? 18 : 24, LITE ? .04 : .031, .75 + random() * .6, LITE ? 1 : 2, (k / 11) * .55 + random() * .08));
  }
  /* 毛細の割れ: 中心付近の短い細い線(本線が走った後に見える) */
- for (let k = 0; k < 18; k++) { const a = random() * Math.PI * 2, r = .05 + random() * .25; cracks.push(grow(Math.cos(a) * r, Math.sin(a) * r, a + (random() - .5) * 1.2, 3 + Math.floor(random() * 4), .02, .22 + random() * .15, 0, .25 + random() * .5)); }
- const dust = Array.from({ length: 260 }, () => ({ a: random() * Math.PI * 2, r: .12 + random() * .8, z: .2 + random() * .8, h: random() * 360, s: random() }));
+ for (let k = 0; k < (LITE ? 6 : 18); k++) { const a = random() * Math.PI * 2, r = .05 + random() * .25; cracks.push(grow(Math.cos(a) * r, Math.sin(a) * r, a + (random() - .5) * 1.2, 3 + Math.floor(random() * 4), .02, .22 + random() * .15, 0, .25 + random() * .5)); }
+ const dust = Array.from({ length: LITE ? 110 : 260 }, () => ({ a: random() * Math.PI * 2, r: .12 + random() * .8, z: .2 + random() * .8, h: random() * 360, s: random() }));
 
  let theme = 'fire', phase = '', since = 0, raf = 0, w = 0, h = 0, sparks = [], fired = new Set(), lastBolt = -1, lastSpark = 0, flareSent = false;
 
@@ -66,7 +69,7 @@
  }
  function resize() {
   w = host.clientWidth; h = host.clientHeight; measureLid();
-  const d = Math.min(devicePixelRatio || 1, 1.5);
+  const d = LITE ? 1 : Math.min(devicePixelRatio || 1, 1.5);
   canvas.width = w * d; canvas.height = h * d;
   c.setTransform(d, 0, 0, d, 0, 0);
  }
@@ -88,7 +91,7 @@
    const a = Math.random() * Math.PI * 2, v = speed * (.4 + Math.random());
    sparks.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - speed * .4, life, max: life, hue: hue + (Math.random() - .5) * 30, size: 1 + Math.random() * 2.2 });
   }
-  if (sparks.length > 420) sparks.splice(0, sparks.length - 420);
+  const cap = LITE ? 160 : 420; if (sparks.length > cap) sparks.splice(0, sparks.length - cap);
  }
  function drawSparks(dt) {
   c.save(); c.globalCompositeOperation = 'lighter';
@@ -106,7 +109,7 @@
  /* 共通の亀裂描画。style={edge,core,dark,glowHue,width} */
  /* 破片: 本線の亀裂に沿って置く小さな欠片(位置は固定・進行で外へ流れる) */
  const shards = [];
- for (const f of cracks) if (!f.branch && f.pts.length > 14) for (const idx of [3, 7, 11, 15, 19]) shards.push({ f, idx, side: random() > .5 ? 1 : -1, size: 3 + random() * 6, rot: random() * 6.28, spin: (random() - .5) * 3 });
+ for (const f of cracks) if (!f.branch && f.pts.length > 14) for (const idx of (LITE ? [4, 10, 15] : [3, 7, 11, 15, 19])) shards.push({ f, idx, side: random() > .5 ? 1 : -1, size: 3 + random() * 6, rot: random() * 6.28, spin: (random() - .5) * 3 });
  /* 共通の亀裂描画。style={edge,core,dark,inner,shard,glowHue,width}
     幅=根元で太く先端で細く・区間ごとにうねる / 外側の柔らかい光 / 縁の影(右下へ) / 暗い溝 / 内部の強い光 / 白い芯 / 破片 */
  function drawCracks(R, p, gather, style) {
@@ -244,8 +247,8 @@
     if (epoch !== lastBolt) { lastBolt = epoch; emitSparks(0, 0, 10 + Math.floor(intensity * 25), 195, 220 + intensity * 200, .6); notify('bolt', { intensity }); }
    }
    /* 氷の粒が中心へ吸い込まれる */
-   for (let j = 0; j < 95; j++) {
-    const v = (j / 95 + t * .11) % 1, a = j * 2.399, r = (1 - v) * R * .7, x = Math.cos(a) * r, y = Math.sin(a) * r * .6;
+   for (let j = 0, jn = LITE ? 48 : 95; j < jn; j++) {
+    const v = (j / jn + t * .11) % 1, a = j * 2.399, r = (1 - v) * R * .7, x = Math.cos(a) * r, y = Math.sin(a) * r * .6;
     c.save(); c.translate(x, y); c.rotate(a + t * .5); c.globalAlpha = Math.sin(v * Math.PI) * .8; c.fillStyle = '#b7faff';
     c.beginPath(); c.ellipse(0, 0, 1.5, 4, 0, 0, Math.PI * 2); c.fill(); c.restore();
    }
@@ -278,8 +281,8 @@
    }
    if (gather) for (let j = 0; j < 16; j++) { const a = j * Math.PI / 8 + t * .07; c.beginPath(); c.moveTo(0, 0); c.lineTo(Math.cos(a) * R, Math.sin(a) * R); c.strokeStyle = '#ffd773'; c.globalAlpha = .06 + p * .12; c.lineWidth = 5; c.stroke(); }
    /* 花びらと金粉 */
-   for (let j = 0; j < 95; j++) {
-    const v = (j / 95 + t * .11) % 1, a = j * 2.399, r = v * R * .7, x = Math.cos(a) * r, y = (v - .5) * h;
+   for (let j = 0, jn = LITE ? 48 : 95; j < jn; j++) {
+    const v = (j / jn + t * .11) % 1, a = j * 2.399, r = v * R * .7, x = Math.cos(a) * r, y = (v - .5) * h;
     c.save(); c.translate(x, y); c.rotate(a + t * .5); c.globalAlpha = Math.sin(v * Math.PI) * .8; c.fillStyle = j % 3 ? '#ffe0a0' : '#ffc4d8';
     c.beginPath(); c.ellipse(0, 0, 3, 7, 0, 0, Math.PI * 2); c.fill(); c.restore();
    }
@@ -350,8 +353,8 @@
     c.beginPath(); c.ellipse(0, 0, r, r * .65, -.3, 0, Math.PI * 2); c.stroke();
    }
    if (theme !== 'dragon') LightningFX.draw(c, { time: t, radius: R * (.25 + intensity * .4), color: theme === 'blessing' ? '#ffe9a8' : '#ffb86b', power: intensity, count: gather ? 4 : 2, reduced });
-   for (let j = 0; j < 36; j++) {
-    const v = (j / 36 + t * .17) % 1, a = j * 2.399, r = (gather ? 1 - v : v) * R * .7, x = Math.cos(a) * r, y = Math.sin(a) * r * .8;
+   for (let j = 0, jn = LITE ? 18 : 36; j < jn; j++) {
+    const v = (j / jn + t * .17) % 1, a = j * 2.399, r = (gather ? 1 - v : v) * R * .7, x = Math.cos(a) * r, y = Math.sin(a) * r * .8;
     c.save(); c.translate(x, y); c.rotate(a + t * .4); c.globalAlpha = Math.sin(v * Math.PI) * intensity * .7; const z = 2 + j % 4;
     c.fillStyle = j % 3 ? (theme === 'dragon' ? '#b9e6ff' : theme === 'blessing' ? '#ffe7b0' : '#96c8dc') : '#fff0c4';
     c.beginPath(); c.moveTo(-z, -z * 2); c.lineTo(z * .7, -z); c.lineTo(z, z * 2); c.closePath(); c.fill(); c.restore();
@@ -369,7 +372,7 @@
   c.restore();
 
   /* 色ずれ(クロマ): 強度が高いときだけ、画面の両端に赤/青のゴーストを薄く重ねる */
-  if (!reduced && intensity > .55) {
+  if (!reduced && !LITE && intensity > .55) {
    const k = (intensity - .55) * 6;
    c.save(); c.globalCompositeOperation = 'screen'; c.globalAlpha = .08 * k;
    c.drawImage(canvas, -3 * k, 0, w, h); c.globalAlpha = .06 * k; c.drawImage(canvas, 3 * k, 0, w, h); c.restore();

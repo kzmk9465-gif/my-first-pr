@@ -230,6 +230,20 @@
   if (scene === 'result') { const a = document.querySelector('#result-rank'); if (a) a.textContent = label; const nme = document.querySelector('#result-name'); if (nme) nme.textContent = rec.prize.name; const im = document.querySelector('#result .result-art img'); if (im && img) im.src = img; const p = document.querySelector('#result p'); if (p) p.textContent = rec.package.name + '｜記録ID ' + rec.id + '｜発送依頼は播州オクのくじページから'; }
   if (scene === 'win' || scene === 'complete') { const a = document.querySelector('#prize-reveal>strong'); if (a) a.textContent = label; const h = document.querySelector('#prize-reveal h2'); if (h) h.textContent = rec.prize.name; const p = document.querySelector('#prize-reveal p'); if (p) p.textContent = rec.package.name + '｜記録ID ' + rec.id; const im = document.querySelector('#prize-reveal img'); if (im && img) im.src = img; const sp = document.querySelector('#prize-reveal span'); if (sp) sp.textContent = '発送依頼は播州オクのくじページから'; }
  }
+ /* ---------------- ?debug=1: 音と映像のずれを画面に出す(確認用) ---------------- */
+ if (new URLSearchParams(location.search).get('debug') === '1' && !isFire) {
+  const box = document.createElement('pre'); box.className = 'v50-debug'; box.style.cssText = 'position:absolute;left:4px;bottom:64px;z-index:9999;margin:0;padding:6px 8px;font:11px/1.4 monospace;color:#9f9;background:#000b;border:1px solid #4a4;pointer-events:none;white-space:pre';
+  host.append(box);
+  let frames = [], last = performance.now(), sceneStart = 0, sceneName = '', acAtScene = 0;
+  new MutationObserver(() => { const n = host.dataset.scene; if (n !== sceneName) { sceneName = n; sceneStart = performance.now(); acAtScene = (typeof score !== 'undefined' && score.ac) ? score.ac.currentTime : 0; } }).observe(host, { attributes: true, attributeFilter: ['data-scene'] });
+  const tick = (t) => { frames.push(t - last); last = t; if (frames.length > 60) frames.shift();
+   const avg = frames.reduce((a, b) => a + b, 0) / (frames.length || 1), worst = Math.max(...frames, 0);
+   const ac = (typeof score !== 'undefined' && score.ac) ? score.ac : null;
+   const vis = (performance.now() - sceneStart) / 1000, aud = ac ? ac.currentTime - acAtScene : 0;
+   box.textContent = '場面 ' + (sceneName || '-') + '\n映像 ' + vis.toFixed(2) + 's  音 ' + aud.toFixed(2) + 's  差 ' + (vis - aud).toFixed(2) + 's\n描画 平均 ' + avg.toFixed(0) + 'ms 最悪 ' + worst.toFixed(0) + 'ms (' + (1000 / (avg || 1)).toFixed(0) + 'fps)\n音の状態 ' + (ac ? ac.state : '-') + '  軽量 ' + (V50.liteActive ? 'ON' : 'OFF') + '  ' + innerWidth + 'x' + innerHeight;
+   requestAnimationFrame(tick); };
+  requestAnimationFrame(tick);
+ }
  /* ---------------- 場面の変化を見張る ---------------- */
  let prev = '';
  function onScene(name) {
