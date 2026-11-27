@@ -156,3 +156,7 @@ html,body{overflow-x:hidden}
 /* ===== 一撃(虹色の冒頭)の光の炸裂を強く。おめでとう！は一撃の後に ===== */
 :is([data-scene=rainbow],[data-phase=rainbow]) .rainbow-break strong{animation-delay:.9s!important}
 .v50-flash.v50-rainbow{background:radial-gradient(ellipse at 50% 46%,#fff 0%,#fff6d0cc 18%,#ffd98a55 38%,transparent 62%)}
+
+/* ===== 一撃と同時に虹色メダカを出す(0.15秒で表示し切る・v50n) ===== */
+:is([data-scene=rainbow],[data-phase=rainbow]) .rainbow-core.rainbow-medaka{animation:v50FishHit 2.6s both!important}
+@keyframes v50FishHit{0%{transform:scale(.7);opacity:0}6%{transform:scale(1.06);opacity:1}16%{transform:scale(.98)}100%{transform:scale(1);opacity:1}}
